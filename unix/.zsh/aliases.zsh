@@ -307,7 +307,7 @@ function myip() {
     if [[ $system == 'termux' ]]; then
         if ! $pm list-installed &>/dev/null 2>&1 | grep -w iproute2 >/dev/null 2>&1; then
             echo "cloudflared is not installed. Installing now..."
-            install iproute2
+            install iproute2 -y &> /dev/null
         fi
         gateway=$(ip route list match 0 table all scope global 2>/dev/null | awk '$3 ~ /\./ {print $5" "$3}')
     else
@@ -713,7 +713,7 @@ function cloudflare() {
     if [[ -n $(search cloudflared &>/dev/null | grep "cloudflared") ]]; then
         if ! which cloudflared &>/dev/null; then
             echo "cloudflared is not installed. Installing now..."
-            install cloudflared -y
+            install cloudflared -y &> /dev/null
             return 1
         fi
     else
@@ -940,7 +940,7 @@ function speeds() {
     if [[ $system == 'termux' ]]; then
         if ! which speedtest-go &>/dev/null; then
             echo "speedtest-go not found. Installing now..."
-            install speedtest-go
+            install speedtest-go -y 
             return 1
         else
             speedtest-go
@@ -949,7 +949,7 @@ function speeds() {
         if ! which speedtest &>/dev/null; then
             echo "speedtest not found. Installing now..."
             if [[ $pm == 'apt' ]]; then
-                install speedtest-cli
+                install speedtest-cli -y &> /dev/null
                 return 1
             else
                 echo $not_support
@@ -1176,7 +1176,7 @@ function sctl() {
             system_service="sv"
         else
             echo "termux service not found. Installing now..."
-            install termux-services -y
+            install termux-services -y &> /dev/null
             echo -ne "Installation success.\nRestart termux for using service daemon."
             return 1
         fi
@@ -1377,7 +1377,7 @@ function sctl() {
 function sc() {
     if ! which ssh &>/dev/null; then
         echo "openssh is not installed. Installing now..."
-        install openssh -y
+        install openssh -y &> /dev/null
         return 1
     fi
     function usage() {
@@ -1968,12 +1968,12 @@ function firewall() {
 function cloudfile() {
     if ! which curl &>/dev/null; then
         echo "curl not found. Installing now..."
-        install curl
+        install curl -y &> /dev/null
         return 1
     fi
     if ! which filebrowser &>/dev/null; then
         echo "filebrowser not found. Installing now..."
-        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash
+        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash &> /dev/null
     fi
 
     function usage() {
@@ -2022,7 +2022,7 @@ function troot() {
     fi
     if ! which proot-distro &>/dev/null; then
         echo "proot-distro is not installed. Installing now..."
-        install proot-distro -y
+        install proot-distro -y &> /dev/null
         return 1
     fi
 
@@ -2363,7 +2363,7 @@ function download() {
 function cv() {
     if ! which convert >/dev/null 2>&1 || ! which ffmpeg >/dev/null 2>&1; then
         echo "Dependency for converter not found. Installing now..."
-        install imagemagick ffmpeg -y
+        install imagemagick ffmpeg -y &> /dev/null
         return 1
     fi
     function usage() {
@@ -2492,7 +2492,21 @@ function cv() {
     done
 }
 
+function colormap() {
+  for i in {0..255}; do print -Pn "%K{$i}  %k%F{$i}${(l:3::0:)i}%f " ${${(M)$((i%6)):#3}:+$'\n'}; done
+}
+
 ########################### END REGULAR ###########################
+
+function ls(){
+    if ! which exa >/dev/null 2>&1; then
+        echo "Dependency not installed. Installing now..."
+        install exa -y &> /dev/null
+        $0 $*
+    else
+        exa --icons --group-directories-first $*
+    fi
+}
 
 function kl() {
     function usage() {
@@ -2589,6 +2603,7 @@ function ah() {
         echo "------------------------------------------------"
         echo "    ca                         Change Alias"
         echo "    cfs | cloudfile            Local to internet"
+        echo "    colormap                   Show color"
         echo "    cv                         Convert all media <video>, <image>, <audio>, <document>"
         echo "    dl | download              Download with simple command"
         echo "    giit                       GIT Program make it simple"
@@ -2690,6 +2705,7 @@ alias ll="ls -l --color=auto"
 alias ls="ls --color=auto"
 alias "ls -la"="ls -la --color=auto"
 alias "ls -l"="ls -l --color=auto"
+alias grep="grep --color"
 
 # Proxy
 alias prosc="proxy socks-custom"
