@@ -1,0 +1,1 @@
+rm -rf $HOME/.zshrc $HOME/.zsh $HOME/.zsh-plugin
