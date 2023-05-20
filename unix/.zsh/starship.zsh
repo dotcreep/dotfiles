@@ -1,10 +1,10 @@
 if [[ -f /etc/os-release || -f /etc/lsb-release || -f /etc/redhat-release ]]; then
   if [[ -f /etc/os-release ]]; then
-    _system=$(grep -oP '^ID=\K\S+' /etc/os-release)
+    _system=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
   elif [[ -f /etc/lsb-release ]]; then
-    _system=$(grep -oP '^ID=\K\S+' /etc/lsb-release)
+    _system=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
   elif [[ -f /etc/redhat-release ]]; then
-    _system=$(grep -oP '^ID=\K\S+' /etc/redhat-release)
+    _system=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
   fi
   if [[ $(uname -mrs | awk '{print $2}' | sed "s/.*\-//") == "Microsoft" ]]; then
     DEVICE=""

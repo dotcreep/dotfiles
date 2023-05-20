@@ -11,11 +11,11 @@ if [ -d "/data/data/com.termux/files/usr" ]; then
     pm="pkg"
     system="termux"
 else
+    pm="not included"
     for package in pacman apk zypper xbps-install pkg yum dnf apt; do
         if which $package >/dev/null; then
             pm=$package
-        else
-            pm="not included"
+            break
         fi
     done
 fi
@@ -24,12 +24,31 @@ function install() {
     if [[ $system == "termux" ]]; then
         $pm install $*
     else
-        if [[ $pm == "apt" || $pm == "dnf" || $pm == "yum" || $pm == "pkg" ]]; then
+        if [[ $pm == "apt" || $pm == "dnf" || $pm == "yum" || $pm == "pkg" || $pm == "zypper" ]]; then
             sudo $pm install $*
         elif [[ $pm == "pacman" || $pm == "xbps-install" ]]; then
             sudo $pm -S $*
         elif [[ $pm == "apk" ]]; then
             sudo $pm add $*
+        else
+            echo $not_support
+            return 1
+        fi
+    fi
+}
+
+function inocon() {
+    if [[ $system == "termux" ]]; then
+        $pm install $* -y
+    else
+        if [[ $pm == "apt" || $pm == "dnf" || $pm == "yum" || $pm == "pkg" || $pm == "zypper" ]]; then
+            sudo $pm install -y $* 
+        elif [[ $pm == "pacman" ]]; then
+            sudo $pm -S --noconfirm $*
+        elif [[ $pm == "xbps-install" ]]; then
+            sudo xbps-install -Sy $*
+        elif [[ $pm == "apk" ]]; then
+            sudo $pm add --no-cache --quiet $*
         else
             echo $not_support
             return 1
@@ -161,10 +180,10 @@ function reinstall() {
 
 function updateandupgrade() {
     if [[ $system == "termux" ]]; then
-        $pm update && $pm upgrade
+        $pm update && $pm upgrade -y
     else
         if [[ $pm == "apt" || $pm == "apk" ]]; then
-            sudo $pm update && sudo $pm upgrade
+            sudo $pm update && sudo $pm upgrade -y
         elif [[ $pm == "pacman" ]]; then
             sudo $pm -Syu
         elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
@@ -301,13 +320,19 @@ function aurs() {
 
 ############################### IPs ###############################
 function myip() {
+    if ! which ip &>/dev/null 2>&1; then
+        install ip-utils -y &>/dev/null 2>&1
+    fi
+    if ! which curl &>/dev/null 2>&1; then
+        install curl -y &>/dev/null 2>&1
+    fi
     gateways=$(ip route list match 0 table all scope global 2>/dev/null | awk '$4 ~ /\./ { gateways = gateways $4 ", " } END { print substr(gateways, 1, length(gateways)-2) }')
     public_ip=$(curl -s ifconfig.me)
     # ALL Local IP
     if [[ $system == 'termux' ]]; then
         if ! $pm list-installed &>/dev/null 2>&1 | grep -w iproute2 >/dev/null 2>&1; then
             echo "cloudflared is not installed. Installing now..."
-            install iproute2 -y &> /dev/null
+            inocon iproute2 &>/dev/null
         fi
         gateway=$(ip route list match 0 table all scope global 2>/dev/null | awk '$3 ~ /\./ {print $5" "$3}')
     else
@@ -321,7 +346,7 @@ function myip() {
             ip_wifi=$(ip address show wlan0 | awk '/inet / {print $2}' | cut -f1 -d'/')
             mac_wifi=$(ip address show wlan0 | awk '/link\/ether / {print $2}' | cut -f1 -d'/')
         else
-            ip_wifi=$(ip address show $int | awk '/inet / {print $2}' | cut -f1 -d'/')
+            ip_wifi=$(ip addr show $(echo $int | awk '{print $1}') 2>/dev/null | awk '/inet / {print $2}' | cut -f1 -d'/')
             mac_wifi=$(cat /sys/class/net/"$int"/address 2>/dev/null | awk '{print $1}')
         fi
         gateway_wifi=$(echo $wifi_interface | awk '{print $2}')
@@ -332,7 +357,7 @@ function myip() {
     fi
     if [[ -n $(echo $lan_interface | awk -F: '{print $1}') ]]; then
         int=$(echo $gateway | awk -v i=$(echo $lan_interface | awk -F: '{print $1}') 'NR==i{print $1}')
-        ip_lan=$(ip address show $(echo $int | awk '{print $1}') | awk '/inet / {print $2}' | cut -f1 -d'/')
+        ip_lan=$(ip address show $(echo $int | awk '{print $1}') 2>/dev/null | awk '/inet / {print $2}' | cut -f1 -d'/')
         gateway_lan=$(echo $lan_interface | awk '{print $2}')
         mac_lan=$(cat /sys/class/net/"$int"/address 2>/dev/null | awk '{print $1}')
     else
@@ -713,7 +738,7 @@ function cloudflare() {
     if [[ -n $(search cloudflared &>/dev/null | grep "cloudflared") ]]; then
         if ! which cloudflared &>/dev/null; then
             echo "cloudflared is not installed. Installing now..."
-            install cloudflared -y &> /dev/null
+            inocon cloudflared &>/dev/null
             return 1
         fi
     else
@@ -772,6 +797,7 @@ function cloudflare() {
         L)
             for file in $HOME/.cloudflared/*.json; do
                 filename=$(basename "$file" .json)
+                break
             done
             if [[ -z $filename ]]; then
                 echo "No tunnel found, use -c instead to create tunnel"
@@ -949,7 +975,7 @@ function speeds() {
         if ! which speedtest &>/dev/null; then
             echo "speedtest not found. Installing now..."
             if [[ $pm == 'apt' ]]; then
-                install speedtest-cli -y &> /dev/null
+                inocon speedtest-cli &>/dev/null
                 return 1
             else
                 echo $not_support
@@ -1176,7 +1202,7 @@ function sctl() {
             system_service="sv"
         else
             echo "termux service not found. Installing now..."
-            install termux-services -y &> /dev/null
+            inocon termux-services &>/dev/null
             echo -ne "Installation success.\nRestart termux for using service daemon."
             return 1
         fi
@@ -1377,7 +1403,7 @@ function sctl() {
 function sc() {
     if ! which ssh &>/dev/null; then
         echo "openssh is not installed. Installing now..."
-        install openssh -y &> /dev/null
+        inocon openssh &>/dev/null
         return 1
     fi
     function usage() {
@@ -1822,6 +1848,7 @@ function webservice() {
                     if ! $pm list-installed &>/dev/null 2>&1 | grep -w $i >/dev/null 2>&1; then
                         echo "Package $i is not installed, installing now..."
                         install $i -y &>/dev/null 2>&1
+                        break
                     fi
                 done
                 sed -i 's/LoadModule mpm_worker_module libexec\/apache2\/mod_mpm_worker.so/#LoadModule mpm_worker_module libexec\/apache2\/mod_mpm_worker.so/' $PREFIX/etc/apache2/httpd.conf
@@ -1968,12 +1995,15 @@ function firewall() {
 function cloudfile() {
     if ! which curl &>/dev/null; then
         echo "curl not found. Installing now..."
-        install curl -y &> /dev/null
+        inocon curl &>/dev/null
         return 1
     fi
     if ! which filebrowser &>/dev/null; then
         echo "filebrowser not found. Installing now..."
-        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash &> /dev/null
+        if ! which filebrowser &>/dev/null; then
+            inocon bash &>/dev/null
+        fi
+        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash >/dev/null 2>&1
     fi
 
     function usage() {
@@ -2011,7 +2041,12 @@ function cloudfile() {
         if [[ -z $port ]]; then port="80"; fi
     fi
     if [[ -z $dirs ]]; then dirs="$HOME"; fi
-
+    if [[ $pm == "apk" ]]; then
+        if ! which sudo >/dev/null 2>&1; then
+            inocon sudo >/dev/null 2>&1
+        fi
+        sudo filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
+    fi
     filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
 }
 
@@ -2022,7 +2057,7 @@ function troot() {
     fi
     if ! which proot-distro &>/dev/null; then
         echo "proot-distro is not installed. Installing now..."
-        install proot-distro -y &> /dev/null
+        inocon proot-distro &>/dev/null
         return 1
     fi
 
@@ -2363,7 +2398,7 @@ function download() {
 function cv() {
     if ! which convert >/dev/null 2>&1 || ! which ffmpeg >/dev/null 2>&1; then
         echo "Dependency for converter not found. Installing now..."
-        install imagemagick ffmpeg -y &> /dev/null
+        inocon imagemagick ffmpeg &>/dev/null
         return 1
     fi
     function usage() {
@@ -2501,7 +2536,7 @@ function colormap() {
 function ls(){
     if ! which exa >/dev/null 2>&1; then
         echo "Dependency not installed. Installing now..."
-        install exa -y &> /dev/null
+        inocon exa &>/dev/null
         $0 $*
     else
         exa --icons --group-directories-first $*

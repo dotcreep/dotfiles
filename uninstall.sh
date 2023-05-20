@@ -1,1 +1,1 @@
-rm -rf $HOME/.zshrc $HOME/.zsh $HOME/.zsh-plugin
+rm -rf $HOME/.zshrc $HOME/.zsh $HOME/.zsh-plugin $HOME/.config/nvim
