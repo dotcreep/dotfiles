@@ -197,25 +197,10 @@ symbol = " "
 style = "bg:#212736"
 format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 
-# [fossil_branch]
-# symbol = " "
-# style = "bg:#212736"
-# format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
-
-# [guix_shell]
-# symbol = " "
-# style = "bg:#212736"
-# format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
-
 [haskell]
 symbol = " "
 style = "bg:#212736"
 format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
-
-# [haxe]
-# symbol = "⌘ "
-# style = "bg:#212736"
-# format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 
 [hg_branch]
 symbol = " "
@@ -307,11 +292,6 @@ format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 symbol = " "
 style = "bg:#212736"
 format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
-
-# [pijul_channel]
-# symbol = "🪺 "
-# style = "bg:#212736"
-# format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 
 [rlang]
 symbol = "ﳒ "
