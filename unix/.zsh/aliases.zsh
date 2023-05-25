@@ -20,6 +20,14 @@ else
     done
 fi
 
+if [[ -f /etc/os-release ]]; then
+    _my_system=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
+elif [[ -f /etc/lsb-release ]]; then
+    _my_system=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
+elif [[ -f /etc/redhat-release ]]; then
+    _my_system=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
+fi
+
 function install() {
     if [[ $system == "termux" ]]; then
         $pm install $*
@@ -338,34 +346,33 @@ function _install_snap(){
         fi
     fi
     if ! which snap &>/dev/null 2&>1; then
-        echo "snap not installed. Installing now..."
-        if [[ -f /etc/os-release ]]; then
-            _my_system=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
-        elif [[ -f /etc/lsb-release ]]; then
-            _my_system=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
-        elif [[ -f /etc/redhat-release ]]; then
-            _my_system=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
-        fi
+        _snappy_installing="snap not installed. Installing now..."
         if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
+            echo $_snappy_installing
             update && install snapd -y
         elif [[ $_my_system == "fedora" ]]; then
+            echo $_snappy_installing
             install snapd
         elif [[ $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" ]]; then
+            echo $_snappy_installing
             install epel-release && install snapd
         elif [[ $_my_system == "opensuse" ]]; then
+            echo $_snappy_installing
             sudo zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Leap_15.0 snappy
             sudo zypper --gpg-auto-import-keys refresh
             sudo zypper dup --from snappy
             sudo zypper install snapd
         elif [[ $_my_system == "manjaro" ]]; then
+            echo $_snappy_installing
             install snapd
         elif [[ $_my_system == "arch" ]]; then
+            echo $_snappy_installing
             cd $HOME
             git clone https://aur.archlinux.org/snapd.git
             cd snapd
             makepkg -si
         else
-            echo "May not listed and will update"
+            echo "Your system not listed, will be updated"
             return 1
         fi
     fi
@@ -373,45 +380,65 @@ function _install_snap(){
 
 function snapi(){
     _install_snap
-    sudo snap install $*
+    if which snap &>/dev/null 2&>1; then
+        sudo snap install $*
+    fi
 }
 
 function snapu(){
-    sudo snap refresh $*
+    _install_snap
+    if which snap &>/dev/null 2&>1; then
+        sudo snap refresh $*
+    fi
 }
 
 function snapv(){
-    sudo snap revert $*
+    _install_snap
+    if which snap &>/dev/null 2&>1; then
+        sudo snap revert $*
+    fi
 }
 
 function snaps(){
     _install_snap
-    snap find $*
+    if which snap &>/dev/null 2&>1; then
+        snap find $*
+    fi
 }
 
 function snapl(){
     _install_snap
-    snap list $*
+    if which snap &>/dev/null 2&>1; then
+        snap list $*
+    fi
 }
 
 function snapla(){
     _install_snap
-    snap list --all $*
+    if which snap &>/dev/null 2&>1; then
+        snap list --all $*
+    fi
 }
 
 function snapon(){
     _install_snap
-    sudo snap enable $*
+    if which snap &>/dev/null 2&>1; then
+        sudo snap enable $*
+    fi
 }
 
 function snapoff(){
     _install_snap
-    sudo snap disable $*
+    if which snap &>/dev/null 2&>1; then
+        sudo snap disable $*
+    fi
 }
 
 function snapr(){
     _install_snap
-    sudo snap remove $*
+    if which snap &>/dev/null 2&>1; then
+        sudo snap remove $*
+    fi
 }
 
 ########################### END PACKAGE ###########################
@@ -2636,6 +2663,205 @@ function colormap() {
 }
 
 ########################### END REGULAR ###########################
+############################# DEV-OPS #############################
+
+function install-kubernetes-master(){
+    if which kubeadm &>/dev/null 2&>1; then
+        echo -n "Do you want reinstall Kubernetes (master) [y/N]? "
+        read answer
+        if [[ $answer == "n" || $answer == "N" ]]; then
+            return 1
+        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
+            echo "Wrong answer!"
+            return 1
+        fi
+    fi
+    echo -n "Do you want install Kubernetes (master) [y/N]? "
+    read answer
+    if [[ $answer == "y" || $answer == "Y" ]]; then
+        if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
+            echo "Installing Kubernetes (master)"
+            update
+            onicon apt-transport-https ca-certificates curl
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+            sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+            update
+            onicon kubeadm kubelet kubectl
+            holdpkg kubeadm kubelet kubectl
+            echo "Completed install kubernetes on system..."
+        elif [[ $_my_system == "centos" ]]; then
+            echo "Installing Kubernetes (master)"
+            update
+            onicon epel-release
+            onicon kubeadm kubelet kubectl
+            sudo systemctl enable --now kubelet
+            echo "Completed install kubernetes on system..."
+        elif [[ $_my_system == "fedora" || $_my_system == "rhel" || $_my_system == "redhat" || $_my_system == "centos" ]]; then
+            echo "Installing Kubernetes (master)"
+            update
+            sudo sh -c 'echo "[kubernetes]" > /etc/yum.repos.d/kubernetes.repo'
+            sudo sh -c 'echo "name=Kubernetes" >> /etc/yum.repos.d/kubernetes.repo'
+            sudo sh -c 'echo "baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64" >> /etc/yum.repos.d/kubernetes.repo'
+            sudo sh -c 'echo "enabled=1" >> /etc/yum.repos.d/kubernetes.repo'
+            sudo sh -c 'echo "gpgcheck=1" >> /etc/yum.repos.d/kubernetes.repo'
+            sudo sh -c 'echo "repo_gpgcheck=1" >> /etc/yum.repos.d/kubernetes.repo'
+            sudo sh -c 'echo "gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" >> /etc/yum.repos.d/kubernetes.repo'
+            onicon kubeadm kubelet kubectl
+            sudo systemctl enable --now kubelet
+            echo "Completed install kubernetes on system..."
+        elif [[ $_my_system == "arch" || $_my_system == "manjaro" ]]; then
+            auri kubernetes-bin
+            echo "Completed install kubernetes on system..."
+        elif [[ $_my_system == "amzn" ]]; then
+            sudo amazon-linux-extras install epel
+            sudo yum install -y kubeadm kubelet kubectl
+            sudo systemctl enable --now kubelet
+            echo "Completed install kubernetes on system..."
+        else
+            echo "$not_support"
+            return 1
+        fi
+        update
+        echo "Installing complete"
+        echo ""
+        echo "Run manual for master: "
+        echo '- "sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-advertise-address=<IP Address Master>"'
+        echo '- "mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config"'
+        echo ""
+        echo "Run for cluster : "
+        echo '- "kubeadm join"'
+    fi
+}
+
+
+function install-minikube(){
+    if which minikube &>/dev/null 2&>1; then
+        echo -n "Do you want reinstall Kubernetes (minikube) [y/N]? "
+        read answer
+        if [[ $answer == "n" || $answer == "N" ]]; then
+            return 1
+        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
+            echo "Wrong answer!"
+            return 1
+        fi
+    fi
+    echo -n "Do you want install Kubernetes (minikube) [y/N]? "
+    read answer_one
+    if [[ $answer_one == "y" || $answer_one == "Y" ]]; then
+        if [[ $_my_system == "ubuntu" || $_my_system == "debian" || $_my_system == "amzn" || $_my_system == "fedora" || $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" || $_my_system == "centos" ]]; then
+            curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+            sudo chmod +x minikube-linux-amd64
+            if [[ -d /usr/local/bin/ ]]; then
+                sudo mv minikube-linux-amd64 /usr/local/bin/minikube
+            elif [[ -d /usr/bin/ ]]; then
+                sudo mv minikube-linux-amd64 /usr/bin/minikube
+            fi
+            minikube version
+            echo "Completed install minikube on system..."
+        elif [[ $_my_system == "arch" || $_my_system == "manjaro" ]]; then
+            yay -S minikube
+            minikube version
+            echo "Completed install minikube on system..."
+        else
+            echo "$not_support"
+        fi
+    fi
+}
+
+function install-ansible(){
+    if which ansible &>/dev/null 2&>1; then
+        echo -n "Do you want reinstall Ansible [y/N]? "
+        read answer
+        if [[ $answer == "n" || $answer == "N" ]]; then
+            return 1
+        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
+            echo "Wrong answer!"
+            return 1
+        fi
+    fi
+    for distro in ubuntu debian amzn fedora rhel redhat centos; do
+        if [[ $distro == $_my_system ]]; then
+            echo "Installing ansible now..."
+            install ansible
+            ansible --version
+            echo "Completed install ansible on system..."
+            break
+        fi
+    done
+}
+
+function install-docker(){
+    if which docker &>/dev/null 2&>1; then
+        echo -n "Do you want reinstall docker [y/N]? "
+        read answer
+        if [[ $answer == "n" || $answer == "N" ]]; then
+            return 1
+        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
+            echo "Wrong answer!"
+            return 1
+        fi
+    fi
+    for distro in ubuntu debian fedora rhel redhat centos; do
+        case $distro in
+            centos | rhel | redhat | fedora )
+                onicon yum-utils
+                if [[ $distro == "redhat" ]]; then
+                    sudo yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+                else
+                    sudo yum-config-manager --add-repo https://download.docker.com/linux/${distro}/docker-ce.repo
+                fi
+                install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                sudo systemctl start docker
+                echo "Completed install docker on system..."
+                break;;
+            ubuntu | debian )
+                sudo apt-get update
+                sudo apt-get install ca-certificates curl gnupg
+                sudo install -m 0755 -d /etc/apt/keyrings
+                curl -fsSL https://download.docker.com/linux/${distro}/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                sudo chmod a+r /etc/apt/keyrings/docker.gpg
+                echo \
+                  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${distro} \
+                  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+                  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                sudo apt-get update
+                sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                echo "Completed install docker on system..."
+                break;;
+            * ) echo "$not_support";break;;
+        esac
+    done
+}
+
+function install-terraform(){
+    if which terraform &>/dev/null 2&>1; then
+        echo -n "Do you want reinstall Terraform [y/N]? "
+        read answer
+        if [[ $answer == "n" || $answer == "N" ]]; then
+            return 1
+        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
+            echo "Wrong answer!"
+            return 1
+        fi
+    fi
+    for distro in ubuntu debian amzn fedora rhel redhat centos arch manjaro; do
+        case $distro in
+            rhel | redhat )
+                    install epel-release && install terraform
+                    break;;
+            ubuntu | debian | amzn | fedora )
+                    install terraform
+                    break;;
+            arch | manjaro )
+                    auri terraform
+                    break;;
+            * ) echo "$not_support"
+                    break;;
+        esac
+    done
+}
+
+########################### END DEV-OPS ###########################
 
 function ls(){
     if ! which exa >/dev/null 2>&1; then
@@ -2696,9 +2922,19 @@ function ah() {
         echo "    -i    Show ip manager helper"
         echo "    -p    Show package manager helper"
         echo "    -P    Show proxy manager helper"
+        for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
+            if [[ $_sup_sys == $_my_system ]]; then
+                echo "    -a    Show Ansible command"
+                echo "    -k    Show Kubernetes command"
+                echo "    -d    Show Docker command"
+                echo "    -t    Show Terraform command"
+                break
+            fi
+        done
+        echo ""
         return 1
     }
-    package_Manager() {
+    function package_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -2742,8 +2978,203 @@ function ah() {
         fi
         return 1
     }
+    for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
+        if [[ $_sup_sys == $_my_system ]]; then
+            function _ansible_shortcut(){
+                echo "This is Ansible command list"
+                echo ""
+                echo "Default command can used:"
+                echo "------------------------------------------------"
+                echo 'Ansible : '
+                echo '    a           ansible '
+                echo '    aconf       ansible-config '
+                echo '    acon        ansible-console '
+                echo '    aver        ansible-version'
+                echo '    arinit      ansible-role-init'
+                echo '    aplaybook   ansible-playbook '
+                echo '    ainv        ansible-inventory '
+                echo '    adoc        ansible-doc '
+                echo '    agal        ansible-galaxy '
+                echo '    apull       ansible-pull '
+                echo '    aval        ansible-vault'
+            }
+            function _kubernetes_shortcut(){
+                echo "This is Kubernetes command list"
+                echo ""
+                echo "Default command can used:"
+                echo "------------------------------------------------"
+                echo 'Kubernetes :'
+                echo '    k           kubectl'
+                echo '    kca         _kca(){ kubectl "$@" --all-namespaces;  unset -f _kca; }; _kca'
+                echo '    kaf         kubectl apply -f'
+                echo '    keti        kubectl exec -t -i'
+                echo '    kcuc        kubectl config use-context'
+                echo '    kcsc        kubectl config set-context'
+                echo '    kcdc        kubectl config delete-context'
+                echo '    kccc        kubectl config current-context'
+                echo '    kcgc        kubectl config get-contexts'
+                echo '    kdel        kubectl delete'
+                echo '    kdelf       kubectl delete -f'
+                echo '    kgp         kubectl get pods'
+                echo '    kgpa        kubectl get pods --all-namespaces'
+                echo '    kgpw        kgp --watch'
+                echo '    kgpwide     kgp -o wide'
+                echo '    kep         kubectl edit pods'
+                echo '    kdp         kubectl describe pods'
+                echo '    kdelp       kubectl delete pods'
+                echo '    kgpall      kubectl get pods --all-namespaces -o wide'
+                echo '    kgpl        kgp -l'
+                echo '    kgpn        kgp -n'
+                echo '    kgs         kubectl get svc'
+                echo '    kgsa        kubectl get svc --all-namespaces'
+                echo '    kgsw        kgs --watch'
+                echo '    kgswide     kgs -o wide'
+                echo '    kes         kubectl edit svc'
+                echo '    kds         kubectl describe svc'
+                echo '    kdels       kubectl delete svc'
+                echo '    kgi         kubectl get ingress'
+                echo '    kgia        kubectl get ingress --all-namespaces'
+                echo '    kei         kubectl edit ingress'
+                echo '    kdi         kubectl describe ingress'
+                echo '    kdeli       kubectl delete ingress'
+                echo '    kgns        kubectl get namespaces'
+                echo '    kens        kubectl edit namespace'
+                echo '    kdns        kubectl describe namespace'
+                echo '    kdelns      kubectl delete namespace'
+                echo '    kcn         kubectl config set-context --current --namespace'
+                echo '    kgcm        kubectl get configmaps'
+                echo '    kgcma       kubectl get configmaps --all-namespaces'
+                echo '    kecm        kubectl edit configmap'
+                echo '    kdcm        kubectl describe configmap'
+                echo '    kdelcm      kubectl delete configmap'
+                echo '    kgsec       kubectl get secret'
+                echo '    kgseca      kubectl get secret --all-namespaces'
+                echo '    kdsec       kubectl describe secret'
+                echo '    kdelsec     kubectl delete secret'
+                echo '    kgd         kubectl get deployment'
+                echo '    kgda        kubectl get deployment --all-namespaces'
+                echo '    kgdw        kgd --watch'
+                echo '    kgdwide     kgd -o wide'
+                echo '    ked         kubectl edit deployment'
+                echo '    kdd         kubectl describe deployment'
+                echo '    kdeld       kubectl delete deployment'
+                echo '    ksd         kubectl scale deployment'
+                echo '    krsd        kubectl rollout status deployment'
+                echo '    kgrs        kubectl get replicaset'
+                echo '    kdrs        kubectl describe replicaset'
+                echo '    kers        kubectl edit replicaset'
+                echo '    krh         kubectl rollout history'
+                echo '    kru         kubectl rollout undo'
+                echo '    kgss        kubectl get statefulset'
+                echo '    kgssa       kubectl get statefulset --all-namespaces'
+                echo '    kgssw       kgss --watch'
+                echo '    kgsswide    kgss -o wide'
+                echo '    kess        kubectl edit statefulset'
+                echo '    kdss        kubectl describe statefulset'
+                echo '    kdelss      kubectl delete statefulset'
+                echo '    ksss        kubectl scale statefulset'
+                echo '    krsss       kubectl rollout status statefulset'
+                echo '    kga         kubectl get all'
+                echo '    kgaa        kubectl get all --all-namespaces'
+                echo '    kl          kubectl logs'
+                echo '    kl1h        kubectl logs --since 1h'
+                echo '    kl1m        kubectl logs --since 1m'
+                echo '    kl1s        kubectl logs --since 1s'
+                echo '    klf         kubectl logs -f'
+                echo '    klf1h       kubectl logs --since 1h -f'
+                echo '    klf1m       kubectl logs --since 1m -f'
+                echo '    klf1s       kubectl logs --since 1s -f'
+                echo '    kcp         kubectl cp'
+                echo '    kgno        kubectl get nodes'
+                echo '    keno        kubectl edit node'
+                echo '    kdno        kubectl describe node'
+                echo '    kdelno      kubectl delete node'
+                echo '    kgpvc       kubectl get pvc'
+                echo '    kgpvca      kubectl get pvc --all-namespaces'
+                echo '    kgpvcw      kgpvc --watch'
+                echo '    kepvc       kubectl edit pvc'
+                echo '    kdpvc       kubectl describe pvc'
+                echo '    kdelpvc     kubectl delete pvc'
+                echo '    kgds        kubectl get daemonset'
+                echo '    kgdsw       kgds --watch'
+                echo '    keds        kubectl edit daemonset'
+                echo '    kdds        kubectl describe daemonset'
+                echo '    kdelds      kubectl delete daemonset'
+                echo '    kgcj        kubectl get cronjob'
+                echo '    kecj        kubectl edit cronjob'
+                echo '    kdcj        kubectl describe cronjob'
+                echo '    kdelcj      kubectl delete cronjob'
+                echo '    kgj         kubectl get job'
+                echo '    kej         kubectl edit job'
+                echo '    kdj         kubectl describe job'
+                echo '    kdelj       kubectl delete job'
+            }
+            function _docker_shortcut(){
+                echo "This is Docker command list"
+                echo ""
+                echo "Default command can used:"
+                echo "------------------------------------------------"
+                echo 'Docker :'
+                echo '    dcu         docker compose up -d'
+                echo '    dcd         docker compose down'
+                echo '    dbl         docker build'
+                echo '    dcin        docker container inspect'
+                echo '    dcls        docker container ls'
+                echo '    dclsa       docker container ls -a'
+                echo '    dib         docker image build'
+                echo '    dii         docker image inspect'
+                echo '    dils        docker image ls'
+                echo '    dipu        docker image push'
+                echo '    dirm        docker image rm'
+                echo '    dit         docker image tag'
+                echo '    dlo         docker container logs'
+                echo '    dnc         docker network create'
+                echo '    dncn        docker network connect'
+                echo '    dndcn       docker network disconnect'
+                echo '    dni         docker network inspect'
+                echo '    dnls        docker network ls'
+                echo '    dnrm        docker network rm'
+                echo '    dpo         docker container port'
+                echo '    dpu         docker pull'
+                echo '    dr          docker container run'
+                echo '    drit        docker container run -it'
+                echo '    drm         docker container rm'
+                echo '    drm!        docker container rm -f'
+                echo '    dsinit      docker swarm init'
+                echo '    dsjoin      docker swarm join'
+                echo '    dst         docker container start'
+                echo '    drs         docker container restart'
+                echo '    dsta        docker stop $(docker ps -q)'
+                echo '    dstp        docker container stop'
+                echo '    dtop        docker top'
+                echo '    dvi         docker volume inspect'
+                echo '    dvls        docker volume ls'
+                echo '    dvprune     docker volume prune'
+                echo '    dxc         docker container exec'
+                echo '    dxcit       docker container exec -it'
+            }
+            function _terraform_shortcut(){
+                echo "This is Terraform command list"
+                echo ""
+                echo "Default command can used:"
+                echo "------------------------------------------------"
+                echo 'Terraform : '
+                echo '    tf          terraform'
+                echo '    tfa         terraform apply'
+                echo '    tfc         terraform console'
+                echo '    tfd         terraform destroy'
+                echo '    tff         terraform fmt'
+                echo '    tfi         terraform init'
+                echo '    tfo         terraform output'
+                echo '    tfp         terraform plan'
+                echo '    tfv         terraform validate'
+            }
+            break
+        fi
+    done
+    
 
-    proxy_Manager() {
+    function proxy_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -2757,7 +3188,7 @@ function ah() {
         echo "    proxy                      Regular proxy command"
         return 1
     }
-    helper_Manager() {
+    function helper_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -2777,7 +3208,7 @@ function ah() {
         fi
         return 1
     }
-    ip_Manager() {
+    function ip_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -2791,36 +3222,22 @@ function ah() {
         fi
         return 1
     }
-    while getopts "iPpHh" opt; do
+    while getopts "akdtiPpHh" opt; do
         case $opt in
-        i)
-            ip_Manager
-            break
-            ;;
-        P)
-            proxy_Manager
-            break
-            ;;
-        p)
-            package_Manager
-            break
-            ;;
-        H)
-            helper_Manager
-            break
-            ;;
-        h | *)
-            usage
-            break
-            ;;
+        "a") _ansible_shortcut;break;;
+        "k") _kubernetes_shortcut;break;;
+        "d") _docker_shortcut;break;;
+        "t") _terraform_shortcut;break;;
+        "i") ip_Manager; break; ;;
+        "P") proxy_Manager; break; ;;
+        "p") package_Manager; break; ;;
+        "H") helper_Manager; break; ;;
+        "h" | *) usage; break; ;;
         \? | :)
-            echo "Invalid option" >&2
-            usage
-            break
-            return 1
-            ;;
+            echo "Invalid option" >&2; usage; exit 1; ;;
         esac
     done
+
     if [[ $# -eq 0 ]]; then
         usage
         return 1
