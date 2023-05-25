@@ -287,35 +287,133 @@ function holdpkg() {
     fi
 }
 
-function aurs() {
+function _install_aur(){
     if [[ $pm != "pacman" ]]; then
-        echo "Sorry, your system is not based of Arch Linux"
+        echo "$not_support"
         return 1
     fi
-    function usage() {
-        echo "Usage: aurs [-i] [-d] [-r] [-u] [-U] [-s]"
-        echo "  -d    Display package details"
-        echo "  -i    Install package"
-        echo "  -r    Remove package"
-        echo "  -s    Search for package"
-        echo "  -u    Update package"
-        echo "  -U    Upgrade package"
-    }
-    while getopts ":i:d:r:s:uUh" opt; do
-        case $opt in
-        i) yay -S $OPTARG ;;
-        d) pacman -Qm $OPTARG ;;
-        r) yay -Runscd $OPTARG ;;
-        u) yay -Sy ;;
-        U) yay -Syu ;;
-        s) yay -Ss $OPTARG ;;
-        \?)
-            echo "Invalid option" >&2
-            usage
-            ;;
-        esac
-    done
+    if ! which yay &>/dev/null 2&>1; then
+        echo "yay not installed. Installing now..."
+        install --needed base-devel git
+        cd $HOME
+        git clone https://aur.archlinux.org/yay.git
+        cd yay
+        makepkg -si
+    fi
 }
+
+function auri(){
+    _install_aur
+    yay -S $*
+}
+function auru(){
+    _install_aur
+    yay -Sy $*
+}
+
+function auruu(){
+    _install_aur
+    yay -Syu $*
+}
+
+function aurs(){
+    _install_aur
+    yay -Ss $*
+}
+
+function aurr(){
+    _install_aur
+    yay -Runscd $*
+}
+
+function _install_snap(){
+    if [[ $system == "termux" ]]; then
+        echo "$not_support"
+        return 1
+    fi
+    if ! which sudo &>/dev/null 2&>1; then
+        install sudo
+        if which usermod &>/dev/null 2&>1; then
+            usermod -G wheel $USER
+        fi
+    fi
+    if ! which snap &>/dev/null 2&>1; then
+        echo "snap not installed. Installing now..."
+        if [[ -f /etc/os-release ]]; then
+            _my_system=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
+        elif [[ -f /etc/lsb-release ]]; then
+            _my_system=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
+        elif [[ -f /etc/redhat-release ]]; then
+            _my_system=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
+        fi
+        if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
+            update && install snapd -y
+        elif [[ $_my_system == "fedora" ]]; then
+            install snapd
+        elif [[ $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" ]]; then
+            install epel-release && install snapd
+        elif [[ $_my_system == "opensuse" ]]; then
+            sudo zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Leap_15.0 snappy
+            sudo zypper --gpg-auto-import-keys refresh
+            sudo zypper dup --from snappy
+            sudo zypper install snapd
+        elif [[ $_my_system == "manjaro" ]]; then
+            install snapd
+        elif [[ $_my_system == "arch" ]]; then
+            cd $HOME
+            git clone https://aur.archlinux.org/snapd.git
+            cd snapd
+            makepkg -si
+        else
+            echo "May not listed and will update"
+            return 1
+        fi
+    fi
+}
+
+function snapi(){
+    _install_snap
+    sudo snap install $*
+}
+
+function snapu(){
+    sudo snap refresh $*
+}
+
+function snapv(){
+    sudo snap revert $*
+}
+
+function snaps(){
+    _install_snap
+    snap find $*
+}
+
+function snapl(){
+    _install_snap
+    snap list $*
+}
+
+function snapla(){
+    _install_snap
+    snap list --all $*
+}
+
+function snapon(){
+    _install_snap
+    sudo snap enable $*
+}
+
+function snapoff(){
+    _install_snap
+    sudo snap disable $*
+}
+
+function snapr(){
+    _install_snap
+    sudo snap remove $*
+}
+
 ########################### END PACKAGE ###########################
 
 ############################### IPs ###############################
@@ -1129,7 +1227,13 @@ function docker-install() {
         echo "$not_support"
     fi
     if ! command -v docker >/dev/null 2>&1; then
-        myos=$(grep -oP '^ID=\K\S+' /etc/os-release)
+        if [[ -f /etc/os-release ]]; then
+          myos=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
+        elif [[ -f /etc/lsb-release ]]; then
+          myos=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
+        elif [[ -f /etc/redhat-release ]]; then
+          myos=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
+        fi
         if [[ $pm == "apt" ]]; then
             echo "Docker service not found. Installing now..."
             sudo apt update &&
@@ -2600,7 +2704,12 @@ function ah() {
         echo "Default command can used:"
         echo "------------------------------------------------"
         if [[ $pm == 'pacman' ]]; then
-            echo "  aurs                       AUR Arch Linux"
+            echo "    auri                       AUR install"
+            echo "    auru                       AUR update"
+            echo "    auruu                      AUR upgrade"
+            echo "    aurs                       AUR Search"
+            echo "    aurr                       AUR Remove"
+            echo ""
         fi
         echo "    cpkg | checkpkg            Check package"
         echo "    d | detail                 Detail package"
@@ -2614,6 +2723,23 @@ function ah() {
         echo "    u | update                 Update package"
         echo "    uu | upgrade               Upgrade package"
         echo "    uuu | updateandupgrade     Update and upgrade package"
+        if which snap &>/dev/null 2&>1; then
+            echo ""
+            echo "    snapi                      SNAP install"
+            echo "    snapu                      SNAP update"
+            echo "    snapv                      SNAP revert"
+            echo "    snaps                      SNAP Search"
+            echo "    snapl                      SNAP list"
+            echo "    snapla                     SNAP list all"
+            echo "    snapon                     SNAP Enable"
+            echo "    snapoff                    SNAP disable"
+            echo "    snapr                      SNAP Remove"
+        elif [[ $system == "termux" ]]; then
+            echo ""
+        else
+            echo ""
+            echo "    snapi                      Install SNAP Package Manager"
+        fi
         return 1
     }
 
@@ -2730,6 +2856,7 @@ alias v="nvim"
 alias p="ping"
 alias ijin="chmod +x"
 alias suser="sudo chmod u+s"
+alias zshrh="echo '' > $HOME/.zsh_history"
 alias unv="rm ~/.config/nvim/init.vim && nano ~/.config/nvim/init.vim"
 alias vz="vim ~/.zshrc"
 alias vv="vim ~/.vimrc"
