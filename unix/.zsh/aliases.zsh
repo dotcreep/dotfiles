@@ -1099,13 +1099,8 @@ function speeds() {
     else
         if ! which speedtest &>/dev/null; then
             echo "speedtest not found. Installing now..."
-            if [[ $pm == 'apt' ]]; then
-                inocon speedtest-cli &>/dev/null
-                return 1
-            else
-                echo $not_support
-                return 1
-            fi
+            inocon speedtest-cli &>/dev/null
+            $0 $*
         else
             speedtest
         fi

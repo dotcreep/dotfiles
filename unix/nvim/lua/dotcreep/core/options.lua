@@ -1,38 +1,20 @@
-local opt = vim.opt -- for consiseness
+local opt = vim.opt -- Conciseness
 
--- line numbers
-opt.relativenumber = true
-opt.number = true
-
--- tab & indentation
-opt.tabstop = 2
-opt.shiftwidth = 2
-opt.expandtab = true
-opt.autoindent = true
-
--- line wrapping
-opt.wrap = false
-
--- search settings
-opt.ignorecase = true
-opt.smartcase = true
-
--- cursor line
-opt.cursorline = true
-
--- appearance
-opt.termguicolors = true
-opt.background = "dark"
-opt.signcolumn = "yes"
-
--- backspace
-opt.backspace = "indent,eor,start"
-
--- clipboard
-opt.clipboard:append("unnamedplus")
-
--- split windows
-opt.splitright = true
-opt.splitbelow = true
-
+opt.relativenumber = true -- Make number is relative
+opt.number = true -- Show line number
+opt.tabstop = 2 -- Tab width
+opt.shiftwidth = 2 -- Tab width using space
+opt.expandtab = true -- Expand Tab
+opt.autoindent = true -- Indentation Automatically
+opt.wrap = false -- Line Wrapping
+opt.ignorecase = true -- Ignore Case
+opt.smartcase = true -- Smart Search Case
+opt.cursorline = false -- Cursor Line
+opt.termguicolors = true -- Make color on termgui
+opt.background = "dark" -- Dark color of background
+opt.signcolumn = "yes" -- Sign Column
+opt.backspace = "indent,eol,start" -- Backspace
+opt.clipboard:append("unnamedplus") -- Clipboard
+opt.splitright = true -- Split Window Right
+opt.splitbelow = true -- Split Window Below
 opt.iskeyword:append("-")
