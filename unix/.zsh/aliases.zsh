@@ -300,7 +300,7 @@ function _install_aur(){
         echo "$not_support"
         return 1
     fi
-    if ! which yay &>/dev/null 2&>1; then
+    if ! which yay >/dev/null 2>&1; then
         echo "yay not installed. Installing now..."
         install --needed base-devel git
         cd $HOME
@@ -339,13 +339,13 @@ function _install_snap(){
         echo "$not_support"
         return 1
     fi
-    if ! which sudo &>/dev/null 2&>1; then
+    if ! which sudo >/dev/null 2>&1; then
         install sudo
-        if which usermod &>/dev/null 2&>1; then
+        if which usermod >/dev/null 2>&1; then
             usermod -G wheel $USER
         fi
     fi
-    if ! which snap &>/dev/null 2&>1; then
+    if ! which snap >/dev/null 2>&1; then
         _snappy_installing="snap not installed. Installing now..."
         if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
             echo $_snappy_installing
@@ -380,63 +380,63 @@ function _install_snap(){
 
 function snapi(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         sudo snap install $*
     fi
 }
 
 function snapu(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         sudo snap refresh $*
     fi
 }
 
 function snapv(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         sudo snap revert $*
     fi
 }
 
 function snaps(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         snap find $*
     fi
 }
 
 function snapl(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         snap list $*
     fi
 }
 
 function snapla(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         snap list --all $*
     fi
 }
 
 function snapon(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         sudo snap enable $*
     fi
 }
 
 function snapoff(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         sudo snap disable $*
     fi
 }
 
 function snapr(){
     _install_snap
-    if which snap &>/dev/null 2&>1; then
+    if which snap >/dev/null 2>&1; then
         sudo snap remove $*
     fi
 }
@@ -2661,7 +2661,7 @@ function colormap() {
 ############################# DEV-OPS #############################
 
 function install-kubernetes-master(){
-    if which kubeadm &>/dev/null 2&>1; then
+    if which kubeadm >/dev/null 2>&1; then
         echo -n "Do you want reinstall Kubernetes (master) [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2730,7 +2730,7 @@ function install-kubernetes-master(){
 
 
 function install-minikube(){
-    if which minikube &>/dev/null 2&>1; then
+    if which minikube >/dev/null 2>&1; then
         echo -n "Do you want reinstall Kubernetes (minikube) [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2764,7 +2764,7 @@ function install-minikube(){
 }
 
 function install-ansible(){
-    if which ansible &>/dev/null 2&>1; then
+    if which ansible >/dev/null 2>&1; then
         echo -n "Do you want reinstall Ansible [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2786,7 +2786,7 @@ function install-ansible(){
 }
 
 function install-docker(){
-    if which docker &>/dev/null 2&>1; then
+    if which docker >/dev/null 2>&1; then
         echo -n "Do you want reinstall docker [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2829,7 +2829,7 @@ function install-docker(){
 }
 
 function install-terraform(){
-    if which terraform &>/dev/null 2&>1; then
+    if which terraform >/dev/null 2>&1; then
         echo -n "Do you want reinstall Terraform [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2954,7 +2954,7 @@ function ah() {
         echo "    u | update                 Update package"
         echo "    uu | upgrade               Upgrade package"
         echo "    uuu | updateandupgrade     Update and upgrade package"
-        if which snap &>/dev/null 2&>1; then
+        if which snap >/dev/null 2>&1; then
             echo ""
             echo "    snapi                      SNAP install"
             echo "    snapu                      SNAP update"
@@ -2972,6 +2972,38 @@ function ah() {
             echo "    snapi                      Install SNAP Package Manager"
         fi
         return 1
+    }
+    function _nmap_shortcut(){
+        if which nmap >/dev/null 2>&1; then
+            function nmap-aliases(){
+                echo "NMAP Aliases : "
+                echo "    nmap-tcp            nmap -sS -p-"
+                echo "    nmap-udp            nmap -sU -p-"
+                echo "    nmap-quick          nmap -T4 -F"
+                echo "    nmap-stealth        nmap -sS -sV -T4 -O -A -F --version-light"
+                echo "    nmap-allports       nmap -p-"
+                echo "    nmap-service        nmap -sV"
+                echo "    nmap-os             nmap -O"
+                echo "    nmap-scripts        nmap -sC"
+                echo "    nmap-fragment       nmap -f"
+                echo "    nmap-mtu            nmap --mtu 24"
+                echo "    nmap-idle           nmap -sI"
+                echo "    nmap-ping           nmap -sn"
+                echo "    nmap-arp            nmap -PR"
+                echo "    nmap-output         nmap -oN scan.txt"
+                echo "    nmap-xml            nmap -oX scan.xml"
+                echo "    nmap-aggressive     nmap -T4 -A -v"
+                echo "    nmap-intense        nmap -T4 -A -v --top-ports 1000"
+                echo "    nmap-http           nmap -p 80,8080"
+                echo "    nmap-https          nmap -p 443"
+                echo "    nmap-ssh            nmap -p 22"
+                echo "    nmap-ftp            nmap -p 21"
+                echo "    nmap-dns            nmap -p 53"
+                echo "    nmap-smb            nmap -p 139,445"
+                echo "    nmap-rdp            nmap -p 3389"
+                echo "    nmap-help           nmap --help"
+            }
+        fi
     }
     for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
         if [[ $_sup_sys == $_my_system ]]; then
@@ -3223,6 +3255,7 @@ function ah() {
         "k") _kubernetes_shortcut;break;;
         "d") _docker_shortcut;break;;
         "t") _terraform_shortcut;break;;
+        "n") _nmap_shortcut;break;;
         "i") ip_Manager; break; ;;
         "P") proxy_Manager; break; ;;
         "p") package_Manager; break; ;;

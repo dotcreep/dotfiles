@@ -1,1 +1,0 @@
-/home/dotunix/dotfiles/unix/.zsh/

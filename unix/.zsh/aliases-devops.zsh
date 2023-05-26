@@ -1,5 +1,5 @@
 # Ansible
-if which ansible &>/dev/null 2&>1; then
+if which ansible >/dev/null 2>&1; then
     function ansible-version(){
         ansible --version
     }
@@ -29,7 +29,7 @@ if which ansible &>/dev/null 2&>1; then
 fi
 
 # Kubernetes
-if which kubectl &>/dev/null 2&>1; then
+if which kubectl >/dev/null 2>&1; then
     # This command is used a LOT both below and in daily life
     alias k='kubectl'
 
@@ -199,7 +199,7 @@ if which kubectl &>/dev/null 2&>1; then
 fi
 
 
-if which docker &>/dev/null 2&>1; then
+if which docker >/dev/null 2>&1; then
     alias dcu='docker compose up -d'
     alias dcd='docker compose down'
     alias dbl='docker build'
@@ -239,7 +239,7 @@ if which docker &>/dev/null 2&>1; then
     alias dxcit='docker container exec -it'
 fi
 
-if which terraform &>/dev/null 2&>1; then
+if which terraform >/dev/null 2>&1; then
     alias tf='terraform'
     alias tfa='terraform apply'
     alias tfc='terraform console'
