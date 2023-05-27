@@ -300,7 +300,7 @@ function _install_aur(){
         echo "$not_support"
         return 1
     fi
-    if ! which yay >/dev/null 2>&1; then
+    if ! which yay &>/dev/null; then
         echo "yay not installed. Installing now..."
         install --needed base-devel git
         cd $HOME
@@ -339,13 +339,13 @@ function _install_snap(){
         echo "$not_support"
         return 1
     fi
-    if ! which sudo >/dev/null 2>&1; then
+    if ! which sudo &>/dev/null; then
         install sudo
-        if which usermod >/dev/null 2>&1; then
+        if which usermod &>/dev/null; then
             usermod -G wheel $USER
         fi
     fi
-    if ! which snap >/dev/null 2>&1; then
+    if ! which snap &>/dev/null; then
         _snappy_installing="snap not installed. Installing now..."
         if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
             echo $_snappy_installing
@@ -380,63 +380,63 @@ function _install_snap(){
 
 function snapi(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         sudo snap install $*
     fi
 }
 
 function snapu(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         sudo snap refresh $*
     fi
 }
 
 function snapv(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         sudo snap revert $*
     fi
 }
 
 function snaps(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         snap find $*
     fi
 }
 
 function snapl(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         snap list $*
     fi
 }
 
 function snapla(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         snap list --all $*
     fi
 }
 
 function snapon(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         sudo snap enable $*
     fi
 }
 
 function snapoff(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         sudo snap disable $*
     fi
 }
 
 function snapr(){
     _install_snap
-    if which snap >/dev/null 2>&1; then
+    if which snap &>/dev/null; then
         sudo snap remove $*
     fi
 }
@@ -445,17 +445,17 @@ function snapr(){
 
 ############################### IPs ###############################
 function myip() {
-    if ! which ip &>/dev/null 2>&1; then
-        install ip-utils -y &>/dev/null 2>&1
+    if ! which ip &&>/dev/null; then
+        install ip-utils -y &&>/dev/null
     fi
-    if ! which curl &>/dev/null 2>&1; then
-        install curl -y &>/dev/null 2>&1
+    if ! which curl &&>/dev/null; then
+        install curl -y &&>/dev/null
     fi
     gateways=$(ip route list match 0 table all scope global 2>/dev/null | awk '$4 ~ /\./ { gateways = gateways $4 ", " } END { print substr(gateways, 1, length(gateways)-2) }')
     public_ip=$(curl -s ifconfig.me)
     # ALL Local IP
     if [[ $system == 'termux' ]]; then
-        if ! $pm list-installed &>/dev/null 2>&1 | grep -w iproute2 >/dev/null 2>&1; then
+        if ! $pm list-installed &&>/dev/null | grep -w iproute2 &>/dev/null; then
             echo "cloudflared is not installed. Installing now..."
             inocon iproute2 &>/dev/null
         fi
@@ -1156,7 +1156,7 @@ function play() {
         esac
     done
 
-    if ! which $gamename >/dev/null 2>&1; then
+    if ! which $gamename &>/dev/null; then
         if [[ $gamename == "2048" ]]; then
             install clang -y
             wget -q https://raw.githubusercontent.com/mevdschee/2048.c/master/2048.c
@@ -1248,7 +1248,7 @@ function docker-install() {
     if [[ $system == "termux" ]]; then
         echo "$not_support"
     fi
-    if ! command -v docker >/dev/null 2>&1; then
+    if ! command -v docker &>/dev/null; then
         if [[ -f /etc/os-release ]]; then
           myos=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
         elif [[ -f /etc/lsb-release ]]; then
@@ -1289,7 +1289,7 @@ function kubectl() {
     if [[ $system == "termux" ]]; then
         echo "$not_support"
     fi
-    if ! which minikube >/dev/null 2>&1; then
+    if ! which minikube &>/dev/null; then
         if [[ $system == "windows" ]]; then
             echo "Detected using WSL 1! May you cannot using it, try out on WSL 2."
             sleep 3
@@ -1315,16 +1315,16 @@ function kubectl() {
             * ) return 1;;
         esac
     fi
-    if ! which kubectl >/dev/null 2>&1 && which minikube >/dev/null 2>&1; then
+    if ! which kubectl &>/dev/null && which minikube &>/dev/null; then
         minikube kubectl $*
-    elif which kubectl >/dev/null 2>&1 && which minikube >/dev/null 2>&1; then
+    elif which kubectl &>/dev/null && which minikube &>/dev/null; then
         kubectl $*
     fi
 }
 
 function sctl() {
     if [[ $system == "termux" ]]; then
-        if which sv >/dev/null 2>&1; then
+        if which sv &>/dev/null; then
             system_service="sv"
         else
             echo "termux service not found. Installing now..."
@@ -1333,18 +1333,18 @@ function sctl() {
             return 1
         fi
     elif [[ $system == "windows" ]]; then
-        if which service >/dev/null 2>&1; then
+        if which service &>/dev/null; then
             system_service="service"
         else
             echo "$not_support"
             return 1
         fi
     else
-        if which systemctl >/dev/null 2>&1; then
+        if which systemctl &>/dev/null; then
             system_service="systemctl"
-        elif which service >/dev/null 2>&1; then
+        elif which service &>/dev/null; then
             system_service="service"
-        elif which sv >/dev/null 2>&1; then
+        elif which sv &>/dev/null; then
             system_service="sv"
         else
             echo "$not_support"
@@ -1971,9 +1971,9 @@ function webservice() {
                 echo "Web server not configured. Configuration now..."
                 packages=("apache2" "libapache2-mod-php" "autoconf" "automake" "bison" "bzip2" "clang" "cmake" "coreutils" "diffutils" "flex" "gawk" "git" "grep" "gzip" "libtool" "make" "patch" "perl" "sed" "silversearcher-ag" "tar" "apache2" "php" "php-apache" "php-apache-ldap" "php-apache-opcache" "php-apache-pgsql" "php-apache-sodium" "php-apcu" "php-fpm" "php-imagick" "php-ldap" "php-pgsql" "php-psr" "php-redis" "php-sodium" "php-zephir-parser" "mariadb" "phpmyadmin")
                 for i in "${packages[@]}"; do
-                    if ! $pm list-installed &>/dev/null 2>&1 | grep -w $i >/dev/null 2>&1; then
+                    if ! $pm list-installed &&>/dev/null | grep -w $i &>/dev/null; then
                         echo "Package $i is not installed, installing now..."
-                        install $i -y &>/dev/null 2>&1
+                        install $i -y &&>/dev/null
                         break
                     fi
                 done
@@ -2129,7 +2129,7 @@ function cloudfile() {
         if ! which filebrowser &>/dev/null; then
             inocon bash &>/dev/null
         fi
-        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash >/dev/null 2>&1
+        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash &>/dev/null
     fi
 
     function usage() {
@@ -2168,8 +2168,8 @@ function cloudfile() {
     fi
     if [[ -z $dirs ]]; then dirs="$HOME"; fi
     if [[ $pm == "apk" ]]; then
-        if ! which sudo >/dev/null 2>&1; then
-            inocon sudo >/dev/null 2>&1
+        if ! which sudo &>/dev/null; then
+            inocon sudo &>/dev/null
         fi
         sudo filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
     fi
@@ -2521,147 +2521,360 @@ function download() {
     fi
 }
 
-function cv() {
-    if ! which convert >/dev/null 2>&1 || ! which ffmpeg >/dev/null 2>&1; then
-        echo "Dependency for converter not found. Installing now..."
-        inocon imagemagick ffmpeg &>/dev/null
-        return 1
-    fi
-    function usage() {
-        echo "Usage  : cv <following>"
-        return 1
-    }
-
-    function video() {
-        PS3="Select video: "
-        select filename in $(ls | grep -E ".(avi|mp4|mkv|flv|wmv|mov|3gp)$" | sed 's/ /\\ /g' | xargs -I{} echo {}); do
-            low=false
-            high=false
-            best=false
-            PS3="Select quality: "
-            select quality in Low Best High; do
-                case $quality in
-                Low)
-                    low=true
-                    break
-                    ;;
-                Best)
-                    best=true
-                    break
-                    ;;
-                High)
-                    high=true
-                    break
-                    ;;
-                *) echo "Invalid option. Try again!" ;;
-                esac
-            done
-            PS3="Select Target: "
-            select ext in mkv mp4 h265 avi mov flv wmv webm 3gp; do
-                if [[ $ext == 'mkv' ]]; then
-                    if $low; then
-                        ffmpeg -i $filename -c:v libx264 -crf 28 -preset ultrafast -c:a copy "${filename%.*}-[x264].mkv"
-                    elif $best; then
-                        ffmpeg -i $filename -c:v libx264 -crf 23 -preset fast -c:a copy "${filename%.*}-[x264].mkv"
-                    elif $high; then
-                        ffmpeg -i $filename -c:v libx264 -crf 18 -preset slower -c:a copy "${filename%.*}-[x264].mkv"
-                    fi
-                    echo "[*] Success convert $filename to $ext"
-                    break
-                elif [[ $ext == 'mp4' ]]; then
-                    if $low; then
-                        ffmpeg -i $filename -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 128k "${filename%.*}-[x264].mp4"
-                    elif $best; then
-                        ffmpeg -i $filename -c:v libx264 -preset veryfast -crf 23 -c:a aac -b:a 192k "${filename%.*}-[x264].mp4"
-                    elif $high; then
-                        ffmpeg -i $filename -c:v libx264 -preset veryfast -crf 18 -c:a aac -b:a 256k "${filename%.*}-[x264].mp4"
-                    fi
-                    echo "[*] Success convert $filename to $ext"
-                    break
-                elif [[ $ext == 'h265' ]]; then
-                    if $low; then
-                        ffmpeg -i $filename -c:v libx265 -preset ultrafast -x265-params crf=28 -c:a libopus -b:a 128k "${filename%.*}-[x264].mp4"
-                    elif $best; then
-                        ffmpeg -i $filename -c:v libx265 -preset fast -x265-params crf=23 -c:a copy -c:a libopus -b:a 192k "${filename%.*}-[x264].mp4"
-                    elif $high; then
-                        ffmpeg -i $filename -c:v libx265 -preset medium -x265-params crf=18 -c:a copy "${filename%.*}-[x264].mp4"
-                    fi
-                    echo "[*] Success convert $filename to $ext"
-                    break
-                elif [[ $ext == 'avi' ]]; then
-                    echo "Comming soon"
-                    return 1
-                elif [[ $ext == 'mov' ]]; then
-                    echo "Comming soon"
-                    return 1
-                elif [[ $ext == 'flv' ]]; then
-                    echo "Comming soon"
-                    return 1
-                elif [[ $ext == 'wmv' ]]; then
-                    echo "Comming soon"
-                    return 1
-                elif [[ $ext == 'webm' ]]; then
-                    echo "Comming soon"
-                    return 1
-                elif [[ $ext == '3gp' ]]; then
-                    echo "Comming soon"
-                    return 1
-                fi
-                break
-            done
-            break
-        done
-    }
-    function audio() {
-        echo "Comming soon"
-    }
-    function image() {
-        echo "Comming soon"
-    }
-    function document() {
-        PS3="Select type: "
-        select action in Merge; do
-            case $action in
-                Merge ) convert *.pdf merger.pdf;;
-            esac
-        done
-    }
-    PS3="Select type: "
-    select type in Video Audio Image Document; do
-        case $type in
-        Video)
-            video
-            break
-            ;;
-        Audio)
-            audio
-            break
-            ;;
-        Image)
-            image
-            break
-            ;;
-        Document)
-            document
-            break
-            ;;
-        *)
-            usage
-            break
-            ;;
-        esac
-    done
-}
-
 function colormap() {
   for i in {0..255}; do print -Pn "%K{$i}  %k%F{$i}${(l:3::0:)i}%f " ${${(M)$((i%6)):#3}:+$'\n'}; done
 }
 
 ########################### END REGULAR ###########################
+################### CONVERT - COMPRESS - MERGER ###################
+
+function _installing_dependency_image_converter(){
+    if ! which convert &>/dev/null || ! which cwebp &>/dev/null || ! which potrace &>/dev/null; then
+        echo "converter image service not found. Installing now..."
+        onicon imagemagick libwebp potrace &>/dev/null
+        echo "Success installing converter image service..."
+        echo "Run again!"
+        return 1
+    fi
+}
+
+function batch-image() {
+    _installing_dependency_image_converter
+    local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
+    erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
+    jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
+    map mef mng mrw mtv nef nrw orf otb pal palm pam pbm pcd pct \
+    pcx pdb pef pes pfm pgm pgx picon pict pix plasma png pnm ppm \
+    psd pwp raf ras rgb rgba rgbo rgf rla rle rw2 sct sfw sgi six \
+    sixel sr2 srf sun svg tga tiff tim tm2 uyvy viff vips wbmp webp \
+    wmz wpg x3f xbm xc xcf xpm xv xwd yuv"
+    PS3="Select extension convert to : "
+    select _ext_image in webp jpg jpeg png svg ico; do
+        for file in *.*; do
+            ext="${file##*.}"
+            if [[ $_image =~ (^|[[:space:]])$ext($|[[:space:]]) ]]; then
+                if [[ ${_ext_image} == "ico" ]]; then
+                    convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "${file%.*}.${_ext_image}"
+                elif [[ ${_ext_image} == "svg" ]]; then
+                    convert "$1" "${1%.*}.ppm" >/dev/null
+                    rm -f "${1%.*}.ppm"
+                    echo "Complete convert $1 to ${file%.*}.${_ext_image}"
+                elif [[ ${_ext_image} == "webp" || ${_ext_image} == "jpg" || ${_ext_image} == "jpeg" || ${_ext_image} == "png" ]]; then
+                    convert "$1" "${1%.*}.${_ext_image}" >/dev/null
+                fi
+                if [[ -f ${file%.*}.${_ext_image##*.} ]]; then
+                    echo "Complete convert $1 to ${file%.*}.${_ext_image}"
+                else
+                    echo "Failed convert $1 to ${file%.*}.${_ext_image}"
+                fi
+            fi
+        done
+        break
+    done
+}
+
+function cimage(){
+    _installing_dependency_image_converter
+    local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
+    erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
+    jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
+    map mef mng mrw mtv nef nrw orf otb pal palm pam pbm pcd pct \
+    pcx pdb pef pes pfm pgm pgx picon pict pix plasma png pnm ppm \
+    psd pwp raf ras rgb rgba rgbo rgf rla rle rw2 sct sfw sgi six \
+    sixel sr2 srf sun svg tga tiff tim tm2 uyvy viff vips wbmp webp \
+    wmz wpg x3f xbm xc xcf xpm xv xwd yuv"
+
+    if [[ $1 == "help" || $1 == "--help" || $1 == "-h" || -z $1 ]]; then
+        echo "Usage  : cimage <input image> <output image>"
+    fi
+    for file in $1; do
+        if [[ $file =~ \.(webp|jpg|jpeg|png|svg|ico)$ ]]; then
+            ext="${1##*.}"
+            if [[ $_image =~ (^|[[:space:]])$ext($|[[:space:]]) ]]; then
+                if [[ ${2##*.} == "ico" ]]; then
+                    convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "${file%.*}.${2##*.}"
+                elif [[ ${2##*.} == "svg" ]]; then
+                    convert "$1" "${1%.*}.ppm" >/dev/null
+                    rm -f "${1%.*}.ppm"
+                    echo "Complete convert $1 to ${file%.*}.${2##*.}"
+                elif [[ ${2##*.} == "webp" || ${2##*.} == "jpg" || ${2##*.} == "jpeg" || ${2##*.} == "png" ]]; then
+                    convert "$1" "${1%.*}.${2##*.}" >/dev/null
+                fi
+                if [[ -f ${file%.*}.${2##*.} ]]; then
+                    echo "Complete convert $1 to ${file%.*}.${2##*.}"
+                else
+                    echo "Failed convert $1 to ${file%.*}.${2##*.}"
+                fi
+            fi
+        else
+            echo "Only support output webp, jpg, jpeg, png, svg, ico."
+            return 1
+        fi
+        break
+    done
+}
+
+
+
+function _installing_dependency_document_converter(){
+    if ! which pandoc &>/dev/null || ! which gs &>/dev/null; then
+        echo "converter document service not installed. Installing now..."
+        onicon pandoc ghostscript &>/dev/null
+        echo "Success installing converter document service..."
+        echo "Run again!"
+        return 1
+    fi
+}
+
+function cdocs(){
+    _installing_dependency_document_converter
+    echo "Default converter document to PDF extension."
+    PS3="Select action: "
+    local _docs="abw aw csv dbk djvu doc docm docx dot dotm \
+    dotx html kwd odt oxps pdf rtf sxw txt wps xls xlsx xps"
+    local _all_docs=$(ls -R | grep -E "\.($(echo $_docs | sed 's/ /|/g'))$")
+    if [[ -z $_all_docs ]]; then
+        echo "No such document extension here!"
+        return 1
+    fi
+    select action in exit all $_all_docs; do
+        if [[ $action == "exit" ]]; then
+            echo "Cancel operation..."
+            return 1
+        elif [[ $action == "all" ]]; then
+            for file in $_all_docs; do
+                pandoc "$file" -o "${file%.*}.pdf"
+                if [[ -f "${file%.*}.pdf" ]]; then
+                    echo "Complete convert $file to ${file%.*}.pdf"
+                else
+                    echo "Failed convert $file to ${file%.*}.pdf"
+                fi
+            done
+        else
+            echo -n "Change format (Default : pdf)[format/N]?"
+            read format
+            if [[ $_all_docs =~ (^|[[:space:]])$format($|[[:space:]]) ]]; then
+                pandoc "$action" -o "${action%.*}.${format##*.}"
+            else
+                format="pdf"
+                pandoc "$action" -o "${action%.*}.${format##*.}"
+            fi
+            if [[ -f "${action%.*}.pdf" ]]; then
+                echo "Complete convert $action to ${action%.*}.${format##*.}"
+            else
+                echo "Failed convert $action to ${action%.*}.${format##*.}"
+            fi
+        fi
+    done
+}
+
+
+function _installing_dependency_media_converter(){
+    if ! which ffmpeg &>/dev/null; then
+        echo "converter media service not found. Installing now..."
+        onicon ffmpeg &>/dev/null
+        echo "Success installing converter media service..."
+        echo "Run again!"
+        return 1
+    fi
+}
+
+function _all_media_converter(){
+    _installing_dependency_media_converter
+    local _all_video="3g2 3gp aaf asf av1 avchd avi cavs divx dv f4v \
+    flv hevc m2ts m2v m4v mjpeg mkv mod mov mp4 mpeg mpeg-2 mpg mts \
+    mxf ogv rm rmvb swf tod ts vob webm wmv wtv xvid"
+    local _all_audio="8svx aac ac3 aiff amb amr ape au avr caf cdda cvs \
+    cvsd cvu dss dts dvms fap flac fssd gsm gsrt hcom htk ima ircam m4a \
+    m4r maud mp2 mp3 nist oga ogg opus paf prc pvf ra sd2 shn sln smp snd \
+    sndr sndt sou sph spx tak tta txw vms voc vox vqf w64 wav wma wv wve xa"
+
+    local input=""
+    local media=""
+    local output=""
+    local quality="medium"
+    local resize=""
+
+    function _all_media_converter_guide_usage(){
+        echo "Usage  : cmedia [OPTION] <format>"
+        echo ""
+        echo "------------------------------------------------"
+        echo "Options:"
+        echo "    -h         Show this help message"
+        echo "    -i         Input file"
+        echo "    -f         Format extension file for output"
+        echo "    -o         Output is optional, use for rename"
+        echo "    -q         Set quality [default : medium]"
+        echo "    -s         Resize for video [comming soon]"
+        echo ""
+    }
+    while getopts ":i:f:o:q:s:h" opt; do
+        case $opt in
+            i ) input="$OPTARG";;
+            f ) format="$OPTARG";;
+            o ) output="$OPTARG";;
+            q ) quality="$OPTARG";;
+            s ) resize="$OPTARG";;
+            h ) _all_media_converter_guide_usage;;
+            \? | *) echo "Invalid option: -$OPTARG" >&2;;
+            : ) echo "Option -$OPTARG requires an argument." >&2;;
+        esac
+    done
+
+    if [[ -z $input || -z $format ]]; then
+        echo "Error: Missing input and format options." >&2
+        usage
+        return 1
+    fi
+    
+    for _allow_format in mp3 m4a opus flac mp4 hevc mkv flv avi webm; do
+        if [[ $_allow_format != $format ]]; then
+            echo "Only support convert to mp3, m4a, opus, flac, mp4, hevc, mkv, flv, avi, dan webm"
+            return 1
+        fi
+        break
+    done
+
+    if [[ -z $output ]]; then
+        output="${input%.*}.${format##*.}"
+    fi
+
+    ffmpeg_command="ffmpeg -i $input"
+
+    # Make sure if input are video and output is audio, that will nothing video on output
+    rv=""
+    local ext="${input%.*}"
+    local _output_ext="${output##*.}"
+    local _output_allow_ext="mp3 m4a opus flac"
+    if [[ $_all_video =~ (^|[[:space:]])$ext($|[[:space:]]) && $_output_allow_ext =~ (^|[[:space:]])$_output_ext($|[[:space:]]) ]]; then
+        rv="-vn"
+    fi
+
+    case ${output##*.} in
+        mp3)
+            case $quality in
+                low)
+                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 7 $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 5 $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 2 $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 0 $output"
+                    ;;
+            esac
+            ;;
+        m4a)
+            case $quality in
+                low)
+                    ffmpeg_command+=" $rv -c:a aac -b:a 96k $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" $rv -c:a aac -b:a 128k $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" $rv -c:a aac -b:a 192k $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" $rv -c:a aac -b:a 256k $output"
+                    ;;
+            esac
+            ;;
+        opus)
+            case $quality in
+                low)
+                    ffmpeg_command+=" $rv -c:a libopus -b:a 64k $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" $rv -c:a libopus -b:a 96k $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" $rv -c:a libopus -b:a 128k $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" $rv -c:a libopus -b:a 192k $output"
+                    ;;
+            esac
+            ;;
+        flac)
+            case $quality in
+                low)
+                    ffmpeg_command+=" $rv -c:a flac -compression_level 4 $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" $rv -c:a flac -compression_level 8 $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" $rv -c:a flac -compression_level 12 $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" $rv -c:a flac -compression_level 16 $output"
+                    ;;
+            esac
+            ;;
+        mp4 | mkv | flv | avi)
+            case $quality in
+                low)
+                    ffmpeg_command+=" -c:v libx264 -crf 28 -c:a aac -b:a 128k $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" -c:v libx264 -crf 23 -c:a aac -b:a 192k $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" -c:v libx264 -crf 18 -c:a aac -b:a 256k $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" -c:v libx264 -crf 14 -c:a aac -b:a 320k $output"
+                    ;;
+            esac
+            ;;
+        hevc)
+            case $quality in
+                low)
+                    ffmpeg_command+=" -c:v libx265 -crf 28 -c:a aac -b:a 128k $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" -c:v libx265 -crf 23 -c:a aac -b:a 192k $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" -c:v libx265 -crf 18 -c:a aac -b:a 256k $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" -c:v libx265 -crf 14 -c:a aac -b:a 320k $output"
+                    ;;
+            esac
+            ;;
+        webm)
+            case $quality in
+                low)
+                    ffmpeg_command+=" -c:v libvpx -crf 28 -b:v 500K -c:a libvorbis -b:a 128K $output"
+                    ;;
+                medium)
+                    ffmpeg_command+=" -c:v libvpx -crf 23 -b:v 1M -c:a libvorbis -b:a 192K $output"
+                    ;;
+                high)
+                    ffmpeg_command+=" -c:v libvpx -crf 18 -b:v 2M -c:a libvorbis -b:a 256K $output"
+                    ;;
+                very-high)
+                    ffmpeg_command+=" -c:v libvpx -crf 14 -b:v 4M -c:a libvorbis -b:a 320K $output"
+                    ;;
+            esac
+            ;;
+        *)
+            echo "Invalid audio output format: $output" >&2
+            ;;
+    esac
+
+}
+
+################# END CONVERT - COMPRESS - MERGER #################
 ############################# DEV-OPS #############################
 
 function install-kubernetes-master(){
-    if which kubeadm >/dev/null 2>&1; then
+    if which kubeadm &>/dev/null; then
         echo -n "Do you want reinstall Kubernetes (master) [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2730,7 +2943,7 @@ function install-kubernetes-master(){
 
 
 function install-minikube(){
-    if which minikube >/dev/null 2>&1; then
+    if which minikube &>/dev/null; then
         echo -n "Do you want reinstall Kubernetes (minikube) [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2764,7 +2977,7 @@ function install-minikube(){
 }
 
 function install-ansible(){
-    if which ansible >/dev/null 2>&1; then
+    if which ansible &>/dev/null; then
         echo -n "Do you want reinstall Ansible [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2786,7 +2999,7 @@ function install-ansible(){
 }
 
 function install-docker(){
-    if which docker >/dev/null 2>&1; then
+    if which docker &>/dev/null; then
         echo -n "Do you want reinstall docker [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2829,7 +3042,7 @@ function install-docker(){
 }
 
 function install-terraform(){
-    if which terraform >/dev/null 2>&1; then
+    if which terraform &>/dev/null; then
         echo -n "Do you want reinstall Terraform [y/N]? "
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
@@ -2859,7 +3072,7 @@ function install-terraform(){
 ########################### END DEV-OPS ###########################
 
 function ls(){
-    if ! which exa >/dev/null 2>&1; then
+    if ! which exa &>/dev/null; then
         echo "Dependency not installed. Installing now..."
         inocon exa &>/dev/null
         $0 $*
@@ -2954,7 +3167,7 @@ function ah() {
         echo "    u | update                 Update package"
         echo "    uu | upgrade               Upgrade package"
         echo "    uuu | updateandupgrade     Update and upgrade package"
-        if which snap >/dev/null 2>&1; then
+        if which snap &>/dev/null; then
             echo ""
             echo "    snapi                      SNAP install"
             echo "    snapu                      SNAP update"
@@ -2974,7 +3187,7 @@ function ah() {
         return 1
     }
     function _nmap_shortcut(){
-        if which nmap >/dev/null 2>&1; then
+        if which nmap &>/dev/null; then
             function nmap-aliases(){
                 echo "NMAP Aliases : "
                 echo "    nmap-tcp            nmap -sS -p-"
@@ -3313,6 +3526,12 @@ alias ls="ls --color=auto"
 alias "ls -la"="ls -la --color=auto"
 alias "ls -l"="ls -l --color=auto"
 alias grep="grep --color"
+
+# Archive
+if which tar &>/dev/null; then
+    alias kompres="tar -czvf"
+    alias ekstrak="tar -czvf"
+fi
 
 # Proxy
 alias prosc="proxy socks-custom"

@@ -14,6 +14,7 @@ SAVEHIST=10000
     source $HOME/.zsh-plugin/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 export STARSHIP_CONFIG=$HOME/.zsh/starship.toml
 export STARSHIP_CACHE=$HOME/.starship/cache
+export GIT_SSH_COMMAND='git -c command.timeout=300'
 
 # Bindkey shortcut
 bindkey "\e[H" beginning-of-line # Home
