@@ -2586,6 +2586,8 @@ function cimage(){
 
     if [[ $1 == "help" || $1 == "--help" || $1 == "-h" || -z $1 ]]; then
         echo "Usage  : cimage <input image> <output image>"
+        echo "Support output extension : webp, jpg, jpeg, png, svg, ico"
+        return 1
     fi
     for file in $1; do
         if [[ $file =~ \.(webp|jpg|jpeg|png|svg|ico)$ ]]; then
@@ -2679,7 +2681,7 @@ function _installing_dependency_media_converter(){
     fi
 }
 
-function _all_media_converter(){
+function cmedia(){
     _installing_dependency_media_converter
     local _all_video="3g2 3gp aaf asf av1 avchd avi cavs divx dv f4v \
     flv hevc m2ts m2v m4v mjpeg mkv mod mov mp4 mpeg mpeg-2 mpg mts \
@@ -2753,6 +2755,9 @@ function _all_media_converter(){
     case ${output##*.} in
         mp3)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 9 $output"
+                    ;;
                 low)
                     ffmpeg_command+=" $rv -c:a libmp3lame -q:a 7 $output"
                     ;;
@@ -2769,6 +2774,9 @@ function _all_media_converter(){
             ;;
         m4a)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" $rv -c:a aac -b:a 64k $output"
+                    ;;
                 low)
                     ffmpeg_command+=" $rv -c:a aac -b:a 96k $output"
                     ;;
@@ -2785,6 +2793,9 @@ function _all_media_converter(){
             ;;
         opus)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" $rv -c:a libopus -b:a 32k $output"
+                    ;;
                 low)
                     ffmpeg_command+=" $rv -c:a libopus -b:a 64k $output"
                     ;;
@@ -2801,6 +2812,9 @@ function _all_media_converter(){
             ;;
         flac)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" $rv -c:a flac -compression_level 0 $output"
+                    ;;
                 low)
                     ffmpeg_command+=" $rv -c:a flac -compression_level 4 $output"
                     ;;
@@ -2817,6 +2831,9 @@ function _all_media_converter(){
             ;;
         mp4 | mkv | flv | avi)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" -c:v libx264 -crf 32 -c:a aac -b:a 96k $output"
+                    ;;
                 low)
                     ffmpeg_command+=" -c:v libx264 -crf 28 -c:a aac -b:a 128k $output"
                     ;;
@@ -2833,6 +2850,9 @@ function _all_media_converter(){
             ;;
         hevc)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" -c:v libx265 -crf 35 -c:a aac -b:a 96k $output"
+                    ;;
                 low)
                     ffmpeg_command+=" -c:v libx265 -crf 28 -c:a aac -b:a 128k $output"
                     ;;
@@ -2849,6 +2869,9 @@ function _all_media_converter(){
             ;;
         webm)
             case $quality in
+                very-low)
+                    ffmpeg_command+=" -c:v libvpx -crf 35 -b:v 100K -c:a libvorbis -b:a 64K $output"
+                    ;;
                 low)
                     ffmpeg_command+=" -c:v libvpx -crf 28 -b:v 500K -c:a libvorbis -b:a 128K $output"
                     ;;
