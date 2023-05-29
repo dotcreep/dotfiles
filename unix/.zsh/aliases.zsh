@@ -445,17 +445,17 @@ function snapr(){
 
 ############################### IPs ###############################
 function myip() {
-    if ! which ip &&>/dev/null; then
-        install ip-utils -y &&>/dev/null
+    if ! which ip &>/dev/null; then
+        install ip-utils -y &>/dev/null
     fi
-    if ! which curl &&>/dev/null; then
-        install curl -y &&>/dev/null
+    if ! which curl &>/dev/null; then
+        install curl -y &>/dev/null
     fi
     gateways=$(ip route list match 0 table all scope global 2>/dev/null | awk '$4 ~ /\./ { gateways = gateways $4 ", " } END { print substr(gateways, 1, length(gateways)-2) }')
     public_ip=$(curl -s ifconfig.me)
     # ALL Local IP
     if [[ $system == 'termux' ]]; then
-        if ! $pm list-installed &&>/dev/null | grep -w iproute2 &>/dev/null; then
+        if ! $pm list-installed &>/dev/null | grep -w iproute2 &>/dev/null; then
             echo "cloudflared is not installed. Installing now..."
             inocon iproute2 &>/dev/null
         fi
@@ -1971,9 +1971,9 @@ function webservice() {
                 echo "Web server not configured. Configuration now..."
                 packages=("apache2" "libapache2-mod-php" "autoconf" "automake" "bison" "bzip2" "clang" "cmake" "coreutils" "diffutils" "flex" "gawk" "git" "grep" "gzip" "libtool" "make" "patch" "perl" "sed" "silversearcher-ag" "tar" "apache2" "php" "php-apache" "php-apache-ldap" "php-apache-opcache" "php-apache-pgsql" "php-apache-sodium" "php-apcu" "php-fpm" "php-imagick" "php-ldap" "php-pgsql" "php-psr" "php-redis" "php-sodium" "php-zephir-parser" "mariadb" "phpmyadmin")
                 for i in "${packages[@]}"; do
-                    if ! $pm list-installed &&>/dev/null | grep -w $i &>/dev/null; then
+                    if ! $pm list-installed &>/dev/null | grep -w $i &>/dev/null; then
                         echo "Package $i is not installed, installing now..."
-                        install $i -y &&>/dev/null
+                        install $i -y &>/dev/null
                         break
                     fi
                 done
