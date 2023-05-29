@@ -2528,18 +2528,14 @@ function colormap() {
 ########################### END REGULAR ###########################
 ################### CONVERT - COMPRESS - MERGER ###################
 
-function _installing_dependency_image_converter(){
+function batch-image() {
     if ! which convert &>/dev/null || ! which cwebp &>/dev/null || ! which potrace &>/dev/null; then
         echo "converter image service not found. Installing now..."
-        onicon imagemagick libwebp potrace &>/dev/null
+        inocon imagemagick libwebp potrace &>/dev/null
         echo "Success installing converter image service..."
         echo "Run again!"
         return 1
     fi
-}
-
-function batch-image() {
-    _installing_dependency_image_converter
     local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
     erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
     jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
@@ -2574,7 +2570,13 @@ function batch-image() {
 }
 
 function cimage(){
-    _installing_dependency_image_converter
+    if ! which convert &>/dev/null || ! which cwebp &>/dev/null || ! which potrace &>/dev/null; then
+        echo "converter image service not found. Installing now..."
+        inocon imagemagick libwebp potrace &>/dev/null
+        echo "Success installing converter image service..."
+        echo "Run again!"
+        return 1
+    fi
     local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
     erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
     jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
@@ -2585,27 +2587,32 @@ function cimage(){
     wmz wpg x3f xbm xc xcf xpm xv xwd yuv"
 
     if [[ $1 == "help" || $1 == "--help" || $1 == "-h" || -z $1 ]]; then
-        echo "Usage  : cimage <input image> <output image>"
+        echo "Usage  : cimage <input image> <output image or extension>"
         echo "Support output extension : webp, jpg, jpeg, png, svg, ico"
         return 1
     fi
     for file in $1; do
         if [[ $file =~ \.(webp|jpg|jpeg|png|svg|ico)$ ]]; then
             ext="${1##*.}"
+            if [[ $2 == $file ]]; then
+                output="${1%.*}.${2##*.}"
+            else
+                output="${2%.*}.${2##*.}"
+            fi
             if [[ $_image =~ (^|[[:space:]])$ext($|[[:space:]]) ]]; then
                 if [[ ${2##*.} == "ico" ]]; then
-                    convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "${file%.*}.${2##*.}"
+                    convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "$output"
                 elif [[ ${2##*.} == "svg" ]]; then
                     convert "$1" "${1%.*}.ppm" >/dev/null
                     rm -f "${1%.*}.ppm"
-                    echo "Complete convert $1 to ${file%.*}.${2##*.}"
+                    echo "Complete convert $1 to $output"
                 elif [[ ${2##*.} == "webp" || ${2##*.} == "jpg" || ${2##*.} == "jpeg" || ${2##*.} == "png" ]]; then
-                    convert "$1" "${1%.*}.${2##*.}" >/dev/null
+                    convert "$1" "$output" >/dev/null
                 fi
-                if [[ -f ${file%.*}.${2##*.} ]]; then
-                    echo "Complete convert $1 to ${file%.*}.${2##*.}"
+                if [[ -f $output ]]; then
+                    echo "Complete convert $1 to $output"
                 else
-                    echo "Failed convert $1 to ${file%.*}.${2##*.}"
+                    echo "Failed convert $1 to $output"
                 fi
             fi
         else
@@ -2616,73 +2623,106 @@ function cimage(){
     done
 }
 
-
-
-function _installing_dependency_document_converter(){
+function cdocs(){
     if ! which pandoc &>/dev/null || ! which gs &>/dev/null; then
         echo "converter document service not installed. Installing now..."
-        onicon pandoc ghostscript &>/dev/null
-        echo "Success installing converter document service..."
-        echo "Run again!"
-        return 1
-    fi
-}
-
-function cdocs(){
-    _installing_dependency_document_converter
-    echo "Default converter document to PDF extension."
-    PS3="Select action: "
-    local _docs="abw aw csv dbk djvu doc docm docx dot dotm \
-    dotx html kwd odt oxps pdf rtf sxw txt wps xls xlsx xps"
-    local _all_docs=$(ls -R | grep -E "\.($(echo $_docs | sed 's/ /|/g'))$")
-    if [[ -z $_all_docs ]]; then
-        echo "No such document extension here!"
-        return 1
-    fi
-    select action in exit all $_all_docs; do
-        if [[ $action == "exit" ]]; then
-            echo "Cancel operation..."
-            return 1
-        elif [[ $action == "all" ]]; then
-            for file in $_all_docs; do
-                pandoc "$file" -o "${file%.*}.pdf"
-                if [[ -f "${file%.*}.pdf" ]]; then
-                    echo "Complete convert $file to ${file%.*}.pdf"
-                else
-                    echo "Failed convert $file to ${file%.*}.pdf"
-                fi
-            done
+        inocon pandoc ghostscript &>/dev/null
+        if [[ $pm == "pkg" && $system == "termux" ]]; then
+            inocon texlive-bin &>/dev/null
+        elif [[ $pm == "pacman" ]]; then
+            inocon texlive-core &>/dev/null
+        elif [[ $pm == "dnf" || $pm == "yum" || $pm == "zypper" ]]; then
+            inocon texlive-latex &>/dev/null
+        elif [[ $pm == "apt" ]]; then
+            inocon texlive-latex-base &>/dev/null
+        elif [[ $pm == "apk" ]]; then
+            inocon texlive &>/dev/null
+        elif [[ $pm == "pkg" && $system != "termux" ]]; then
+            inocon texlive-base &>/dev/null
         else
-            echo -n "Change format (Default : pdf)[format/N]?"
-            read format
-            if [[ $_all_docs =~ (^|[[:space:]])$format($|[[:space:]]) ]]; then
-                pandoc "$action" -o "${action%.*}.${format##*.}"
-            else
-                format="pdf"
-                pandoc "$action" -o "${action%.*}.${format##*.}"
-            fi
-            if [[ -f "${action%.*}.pdf" ]]; then
-                echo "Complete convert $action to ${action%.*}.${format##*.}"
-            else
-                echo "Failed convert $action to ${action%.*}.${format##*.}"
-            fi
+            echo "$not_support"
+            return 1
+        fi
+        if which pandoc &>/dev/null && which gs &>/dev/null; then
+            echo "Success installing converter document service..."
+            echo "Run again!"
+        else
+            echo "Failed installing converter document service..."
+        fi
+        return 1
+    fi
+    PS3="Select action: "
+    local _docs=("abw" "aw" "csv" "dbk" "djvu" "doc" "docm" "docx" \
+        "dot" "dotm" "dotx" "html" "kwd" "odt" "oxps" "pdf" "rtf" \
+        "sxw" "txt" "wps" "xls" "xlsx" "xps")
+    local _all_files=false
+
+    function _all_docs_converter_guide_usage(){
+        echo "Usage  : cdocs [OPTION] <format>"
+        echo ""
+        echo "------------------------------------------------"
+        echo "Options:"
+        echo "    -h         Show this help message"
+        echo "    -i         Input file"
+        echo "    -f         Format extension file for output"
+        echo "    -o         Output is optional, use for rename"
+        echo ""
+    }
+
+    while getopts ":i:f:o:q:s:ah" opt; do
+        case $opt in
+            i ) input="$OPTARG";;
+            f ) format="$OPTARG";;
+            o ) output="$OPTARG";;
+            q ) quality="$OPTARG";;
+            a ) _all_files=true;;
+            h ) _all_docs_converter_guide_usage;;
+            \? | *) echo "Invalid option: -$OPTARG" >&2;;
+            : ) echo "Option -$OPTARG requires an argument." >&2;;
+        esac
+    done
+
+    if [[ -z $input || -z $format ]]; then
+        echo "Error: Missing input and format options." >&2
+        _all_docs_converter_guide_usage
+        return 1
+    fi
+    if [[ -z $output ]]; then
+        output="${input%.*}.${format##*.}"
+    fi
+    for _check_ext in "${_docs[@]}"; do
+        if [[ $format == $_check_ext ]]; then
+            _allow_proccessing=true
+            break
+        else
+            _allow_proccessing=false
         fi
     done
+
+    if [[ $_allow_proccessing == false ]]; then
+        echo "Your format is not support! Run '-h' for more information."
+        return 1
+    fi
+
+    if [[ $_all_files == true ]]; then
+        _get_all="${input##*.}"
+        find $(pwd) -name "$_get_all" -type f | while read -r file; do
+            pandoc "$file" -o "${file%.*}.${format##*.}"
+        done
+    else
+        pandoc "$input" -o "$output"
+    fi
 }
 
 
-function _installing_dependency_media_converter(){
+function cmedia(){
     if ! which ffmpeg &>/dev/null; then
         echo "converter media service not found. Installing now..."
-        onicon ffmpeg &>/dev/null
+        inocon ffmpeg &>/dev/null
         echo "Success installing converter media service..."
         echo "Run again!"
         return 1
     fi
-}
-
-function cmedia(){
-    _installing_dependency_media_converter
     local _all_video="3g2 3gp aaf asf av1 avchd avi cavs divx dv f4v \
     flv hevc m2ts m2v m4v mjpeg mkv mod mov mp4 mpeg mpeg-2 mpg mts \
     mxf ogv rm rmvb swf tod ts vob webm wmv wtv xvid"
@@ -2725,23 +2765,12 @@ function cmedia(){
 
     if [[ -z $input || -z $format ]]; then
         echo "Error: Missing input and format options." >&2
-        usage
+        _all_media_converter_guide_usage
         return 1
     fi
-    
-    for _allow_format in mp3 m4a opus flac mp4 hevc mkv flv avi webm; do
-        if [[ $_allow_format != $format ]]; then
-            echo "Only support convert to mp3, m4a, opus, flac, mp4, hevc, mkv, flv, avi, dan webm"
-            return 1
-        fi
-        break
-    done
-
     if [[ -z $output ]]; then
         output="${input%.*}.${format##*.}"
     fi
-
-    ffmpeg_command="ffmpeg -i $input"
 
     # Make sure if input are video and output is audio, that will nothing video on output
     rv=""
@@ -2752,142 +2781,147 @@ function cmedia(){
         rv="-vn"
     fi
 
+    if [ -n "$rv" ]; then
+        ffmpeg_command="ffmpeg -i '$input' $rv"
+    else
+        ffmpeg_command="ffmpeg -i '$input'"
+    fi
     case ${output##*.} in
         mp3)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 9 $output"
+                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 9 '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 7 $output"
+                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 7 '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 5 $output"
+                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 5 '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 2 $output"
+                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 2 '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" $rv -c:a libmp3lame -q:a 0 $output"
+                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 0 '$output'"
                     ;;
             esac
             ;;
         m4a)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" $rv -c:a aac -b:a 64k $output"
+                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 64k '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" $rv -c:a aac -b:a 96k $output"
+                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 96k '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" $rv -c:a aac -b:a 128k $output"
+                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 128k '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" $rv -c:a aac -b:a 192k $output"
+                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 192k '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" $rv -c:a aac -b:a 256k $output"
+                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 256k '$output'"
                     ;;
             esac
             ;;
         opus)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" $rv -c:a libopus -b:a 32k $output"
+                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 32k '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" $rv -c:a libopus -b:a 64k $output"
+                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 64k '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" $rv -c:a libopus -b:a 96k $output"
+                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 96k '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" $rv -c:a libopus -b:a 128k $output"
+                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 128k '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" $rv -c:a libopus -b:a 192k $output"
+                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 192k '$output'"
                     ;;
             esac
             ;;
         flac)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" $rv -c:a flac -compression_level 0 $output"
+                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 0 '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" $rv -c:a flac -compression_level 4 $output"
+                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 4 '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" $rv -c:a flac -compression_level 8 $output"
+                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 8 '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" $rv -c:a flac -compression_level 12 $output"
+                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 12 '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" $rv -c:a flac -compression_level 16 $output"
+                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 16 '$output'"
                     ;;
             esac
             ;;
         mp4 | mkv | flv | avi)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" -c:v libx264 -crf 32 -c:a aac -b:a 96k $output"
+                    sh -c "$ffmpeg_command -c:v libx264 -crf 32 -c:a aac -b:a 96k '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" -c:v libx264 -crf 28 -c:a aac -b:a 128k $output"
+                    sh -c "$ffmpeg_command -c:v libx264 -crf 28 -c:a aac -b:a 128k '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" -c:v libx264 -crf 23 -c:a aac -b:a 192k $output"
+                    sh -c "$ffmpeg_command -c:v libx264 -crf 23 -c:a aac -b:a 192k '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" -c:v libx264 -crf 18 -c:a aac -b:a 256k $output"
+                    sh -c "$ffmpeg_command -c:v libx264 -crf 18 -c:a aac -b:a 256k '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" -c:v libx264 -crf 14 -c:a aac -b:a 320k $output"
+                    sh -c "$ffmpeg_command -c:v libx264 -crf 14 -c:a aac -b:a 320k '$output'"
                     ;;
             esac
             ;;
         hevc)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" -c:v libx265 -crf 35 -c:a aac -b:a 96k $output"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 35 -c:a aac -b:a 96k '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" -c:v libx265 -crf 28 -c:a aac -b:a 128k $output"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 28 -c:a aac -b:a 128k '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" -c:v libx265 -crf 23 -c:a aac -b:a 192k $output"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 23 -c:a aac -b:a 192k '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" -c:v libx265 -crf 18 -c:a aac -b:a 256k $output"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 18 -c:a aac -b:a 256k '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" -c:v libx265 -crf 14 -c:a aac -b:a 320k $output"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 14 -c:a aac -b:a 320k '$output'"
                     ;;
             esac
             ;;
         webm)
             case $quality in
                 very-low)
-                    ffmpeg_command+=" -c:v libvpx -crf 35 -b:v 100K -c:a libvorbis -b:a 64K $output"
+                    sh -c "$ffmpeg_command -c:v libvpx -crf 35 -b:v 100K -c:a libvorbis -b:a 64K '$output'"
                     ;;
                 low)
-                    ffmpeg_command+=" -c:v libvpx -crf 28 -b:v 500K -c:a libvorbis -b:a 128K $output"
+                    sh -c "$ffmpeg_command -c:v libvpx -crf 28 -b:v 500K -c:a libvorbis -b:a 128K '$output'"
                     ;;
                 medium)
-                    ffmpeg_command+=" -c:v libvpx -crf 23 -b:v 1M -c:a libvorbis -b:a 192K $output"
+                    sh -c "$ffmpeg_command -c:v libvpx -crf 23 -b:v 1M -c:a libvorbis -b:a 192K '$output'"
                     ;;
                 high)
-                    ffmpeg_command+=" -c:v libvpx -crf 18 -b:v 2M -c:a libvorbis -b:a 256K $output"
+                    sh -c "$ffmpeg_command -c:v libvpx -crf 18 -b:v 2M -c:a libvorbis -b:a 256K '$output'"
                     ;;
                 very-high)
-                    ffmpeg_command+=" -c:v libvpx -crf 14 -b:v 4M -c:a libvorbis -b:a 320K $output"
+                    sh -c "$ffmpeg_command -c:v libvpx -crf 14 -b:v 4M -c:a libvorbis -b:a 320K '$output'"
                     ;;
             esac
             ;;
         *)
-            echo "Invalid audio output format: $output" >&2
+            echo "Invalid audio output format: '$output'" >&2
             ;;
     esac
 
@@ -2913,18 +2947,18 @@ function install-kubernetes-master(){
         if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
             echo "Installing Kubernetes (master)"
             update
-            onicon apt-transport-https ca-certificates curl
+            inocon apt-transport-https ca-certificates curl
             curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
             sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
             update
-            onicon kubeadm kubelet kubectl
+            inocon kubeadm kubelet kubectl
             holdpkg kubeadm kubelet kubectl
             echo "Completed install kubernetes on system..."
         elif [[ $_my_system == "centos" ]]; then
             echo "Installing Kubernetes (master)"
             update
-            onicon epel-release
-            onicon kubeadm kubelet kubectl
+            inocon epel-release
+            inocon kubeadm kubelet kubectl
             sudo systemctl enable --now kubelet
             echo "Completed install kubernetes on system..."
         elif [[ $_my_system == "fedora" || $_my_system == "rhel" || $_my_system == "redhat" || $_my_system == "centos" ]]; then
@@ -2937,7 +2971,7 @@ function install-kubernetes-master(){
             sudo sh -c 'echo "gpgcheck=1" >> /etc/yum.repos.d/kubernetes.repo'
             sudo sh -c 'echo "repo_gpgcheck=1" >> /etc/yum.repos.d/kubernetes.repo'
             sudo sh -c 'echo "gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" >> /etc/yum.repos.d/kubernetes.repo'
-            onicon kubeadm kubelet kubectl
+            inocon kubeadm kubelet kubectl
             sudo systemctl enable --now kubelet
             echo "Completed install kubernetes on system..."
         elif [[ $_my_system == "arch" || $_my_system == "manjaro" ]]; then
@@ -3035,7 +3069,7 @@ function install-docker(){
     for distro in ubuntu debian fedora rhel redhat centos; do
         case $distro in
             centos | rhel | redhat | fedora )
-                onicon yum-utils
+                inocon yum-utils
                 if [[ $distro == "redhat" ]]; then
                     sudo yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
                 else
