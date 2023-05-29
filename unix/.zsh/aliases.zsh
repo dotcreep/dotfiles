@@ -2905,19 +2905,19 @@ function cmedia(){
         hevc)
             case $quality in
                 very-low)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 35 -c:a aac -b:a 96k '$output'"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 35 -c:a aac -b:a 96k '${output##*.}.mp4'"
                     ;;
                 low)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 28 -c:a aac -b:a 128k '$output'"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 28 -c:a aac -b:a 128k '${output##*.}.mp4'"
                     ;;
                 medium)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 23 -c:a aac -b:a 192k '$output'"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 23 -c:a aac -b:a 192k '${output##*.}.mp4'"
                     ;;
                 high)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 18 -c:a aac -b:a 256k '$output'"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 18 -c:a aac -b:a 256k '${output##*.}.mp4'"
                     ;;
                 very-high)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 14 -c:a aac -b:a 320k '$output'"
+                    sh -c "$ffmpeg_command -c:v libx265 -crf 14 -c:a aac -b:a 320k '${output##*.}.mp4'"
                     ;;
             esac
             ;;
@@ -3553,7 +3553,7 @@ function ah() {
         echo "    colormap                   Show color"
         echo "    cdocs                      Document onverter"
         echo "    cimage                     Image converter"
-        echo "    cvideo                     Video converter"
+        echo "    cmedia                     Music and Video converter"
         echo "    dl | download              Download with simple command"
         echo "    giit                       GIT Program make it simple"
         echo "    mpdf                       Merge PDF file"
