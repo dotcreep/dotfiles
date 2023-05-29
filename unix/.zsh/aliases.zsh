@@ -2528,53 +2528,16 @@ function colormap() {
 ########################### END REGULAR ###########################
 ################### CONVERT - COMPRESS - MERGER ###################
 
-function batch-image() {
-    if ! which convert &>/dev/null || ! which cwebp &>/dev/null || ! which potrace &>/dev/null; then
-        echo "converter image service not found. Installing now..."
-        inocon imagemagick libwebp potrace &>/dev/null
-        echo "Success installing converter image service..."
-        echo "Run again!"
-        return 1
-    fi
-    local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
-    erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
-    jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
-    map mef mng mrw mtv nef nrw orf otb pal palm pam pbm pcd pct \
-    pcx pdb pef pes pfm pgm pgx picon pict pix plasma png pnm ppm \
-    psd pwp raf ras rgb rgba rgbo rgf rla rle rw2 sct sfw sgi six \
-    sixel sr2 srf sun svg tga tiff tim tm2 uyvy viff vips wbmp webp \
-    wmz wpg x3f xbm xc xcf xpm xv xwd yuv"
-    PS3="Select extension convert to : "
-    select _ext_image in webp jpg jpeg png svg ico; do
-        for file in *.*; do
-            ext="${file##*.}"
-            if [[ $_image =~ (^|[[:space:]])$ext($|[[:space:]]) ]]; then
-                if [[ ${_ext_image} == "ico" ]]; then
-                    convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "${file%.*}.${_ext_image}"
-                elif [[ ${_ext_image} == "svg" ]]; then
-                    convert "$1" "${1%.*}.ppm" >/dev/null
-                    rm -f "${1%.*}.ppm"
-                    echo "Complete convert $1 to ${file%.*}.${_ext_image}"
-                elif [[ ${_ext_image} == "webp" || ${_ext_image} == "jpg" || ${_ext_image} == "jpeg" || ${_ext_image} == "png" ]]; then
-                    convert "$1" "${1%.*}.${_ext_image}" >/dev/null
-                fi
-                if [[ -f ${file%.*}.${_ext_image##*.} ]]; then
-                    echo "Complete convert $1 to ${file%.*}.${_ext_image}"
-                else
-                    echo "Failed convert $1 to ${file%.*}.${_ext_image}"
-                fi
-            fi
-        done
-        break
-    done
-}
-
 function cimage(){
     if ! which convert &>/dev/null || ! which cwebp &>/dev/null || ! which potrace &>/dev/null; then
         echo "converter image service not found. Installing now..."
         inocon imagemagick libwebp potrace &>/dev/null
-        echo "Success installing converter image service..."
-        echo "Run again!"
+        if which convert &>/dev/null || which cwebp &>/dev/null || which potrace &>/dev/null; then
+            echo "Success installing converter image service..."
+            echo "Run again!"
+        else
+            echo "Failed installing converter image service..."
+        fi
         return 1
     fi
     local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
@@ -2587,40 +2550,93 @@ function cimage(){
     wmz wpg x3f xbm xc xcf xpm xv xwd yuv"
 
     if [[ $1 == "help" || $1 == "--help" || $1 == "-h" || -z $1 ]]; then
-        echo "Usage  : cimage <input image> <output image or extension>"
+        echo "Usage  : cimage <input image or extension> <output image or extension>"
+        echo ""
         echo "Support output extension : webp, jpg, jpeg, png, svg, ico"
+        echo "Example:"
+        echo "    Batch  : 'cimage png ico'        "
+        echo "             Convert all image ext 'png' to ico with default name"
+        echo ""
+        echo "    Single : 'cimage example.png ico'"
+        echo "             Convert image extension png to ico with default name"
+        echo ""
+        echo "    Single Custom : 'cimage example.png example.ico'"
+        echo "             Convert image extension png to ico with custom name"
+        echo ""
         return 1
     fi
-    for file in $1; do
-        if [[ $file =~ \.(webp|jpg|jpeg|png|svg|ico)$ ]]; then
-            ext="${1##*.}"
-            if [[ $2 == $file ]]; then
-                output="${1%.*}.${2##*.}"
-            else
-                output="${2%.*}.${2##*.}"
-            fi
-            if [[ $_image =~ (^|[[:space:]])$ext($|[[:space:]]) ]]; then
-                if [[ ${2##*.} == "ico" ]]; then
-                    convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "$output"
-                elif [[ ${2##*.} == "svg" ]]; then
-                    convert "$1" "${1%.*}.ppm" >/dev/null
-                    rm -f "${1%.*}.ppm"
-                    echo "Complete convert $1 to $output"
-                elif [[ ${2##*.} == "webp" || ${2##*.} == "jpg" || ${2##*.} == "jpeg" || ${2##*.} == "png" ]]; then
-                    convert "$1" "$output" >/dev/null
-                fi
-                if [[ -f $output ]]; then
-                    echo "Complete convert $1 to $output"
-                else
-                    echo "Failed convert $1 to $output"
-                fi
-            fi
-        else
-            echo "Only support output webp, jpg, jpeg, png, svg, ico."
+    _all=false
+    if [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
+        _all=true
+    fi
+
+    if [[ $_all == true ]]; then
+        _check_file_images=$(find ./ -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ')
+        if [[ -z $_check_file_images ]]; then
+            echo "File does not exist"
             return 1
         fi
-        break
-    done
+        for file in $(find ./ -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ');
+        do
+            if ! [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
+                echo "Error: input is not supported. Run 'cimage help' for more."
+                return 1
+            fi
+            if [[ $2 =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]]; then
+                output="${file%.*}.$2"
+            else
+                echo "Error: output is not supported. Run 'cimage help' for more."
+                return 1
+            fi
+            if [[ ${output##*.} == "ico" ]]; then
+                convert -resize x16 -gravity center -crop 16x16+0+0 "$file" -flatten -colors 256 -background transparent "$output"
+            elif [[ ${output##*.} == "svg" ]]; then
+                convert "$file" "${file%.*}.ppm" >/dev/null
+                potrace -s "${file%.*}.ppm" -o "$output" >/dev/null
+                rm -f "${file%.*}.ppm"
+            elif [[ ${output##*.} == "webp" || ${output##*.} == "jpg" || ${output##*.} == "jpeg" || ${output##*.} == "png" ]]; then
+                convert "$file" "$output" >/dev/null
+            fi
+            if [[ -f $output ]]; then
+                echo "Complete convert $file to $output"
+            else
+                echo "Failed convert $file to $output"
+                break
+            fi
+        done
+    else
+        if [[ ! -f $1 ]]; then
+            echo "File does not exist"
+            return 1
+        fi
+        if ! [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
+            echo "Error: input is not supported. Run 'cimage help' for more."
+            return 1
+        fi
+        if [[ $2 =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]]; then
+            output="${1%.*}.$2"
+        elif [[ -n ${2%.*} && -n ${2##*.} ]]; then
+            output="$2"
+        else
+            echo "Error: output is not supported. Run 'cimage help' for more."
+            return 1
+        fi
+        if [[ ${output##*.} == "ico" ]]; then
+            convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "$output"
+        elif [[ ${output##*.} == "svg" ]]; then
+            convert "$1" "${1%.*}.ppm" >/dev/null
+            potrace -s "${1%.*}.ppm" -o "$output" >/dev/null
+            rm -f "${1%.*}.ppm"
+        elif [[ ${output##*.} == "webp" || ${output##*.} == "jpg" || ${output##*.} == "jpeg" || ${output##*.} == "png" ]]; then
+            convert "$1" "$output" >/dev/null
+        fi
+        if [[ -f $output ]]; then
+            echo "Complete convert $1 to $output"
+        else
+            echo "Failed convert $1 to $output"
+            break
+        fi
+    fi
 }
 
 function cdocs(){
@@ -2719,8 +2735,12 @@ function cmedia(){
     if ! which ffmpeg &>/dev/null; then
         echo "converter media service not found. Installing now..."
         inocon ffmpeg &>/dev/null
-        echo "Success installing converter media service..."
-        echo "Run again!"
+        if which ffmpeg &>/dev/null; then
+            echo "Success installing converter media service..."
+            echo "Run again!"
+        else
+            echo "Failed installing converter media service..."
+        fi
         return 1
     fi
     local _all_video="3g2 3gp aaf asf av1 avchd avi cavs divx dv f4v \
@@ -2924,7 +2944,6 @@ function cmedia(){
             echo "Invalid audio output format: '$output'" >&2
             ;;
     esac
-
 }
 
 ################# END CONVERT - COMPRESS - MERGER #################
@@ -3493,7 +3512,9 @@ function ah() {
         echo "    ca                         Change Alias"
         echo "    cfs | cloudfile            Local to internet"
         echo "    colormap                   Show color"
-        echo "    cv                         Convert all media <video>, <image>, <audio>, <document>"
+        echo "    cdocs                      Document onverter"
+        echo "    cimage                     Image converter"
+        echo "    cvideo                     Video converter"
         echo "    dl | download              Download with simple command"
         echo "    giit                       GIT Program make it simple"
         echo "    rz                         Restart zsh"
