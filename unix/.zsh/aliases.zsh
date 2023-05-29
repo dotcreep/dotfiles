@@ -2571,12 +2571,12 @@ function cimage(){
     fi
 
     if [[ $_all == true ]]; then
-        _check_file_images=$(find ./ -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ')
+        _check_file_images=$(find ./ -maxdepth 1 -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ')
         if [[ -z $_check_file_images ]]; then
             echo "File does not exist"
             return 1
         fi
-        for file in $(find ./ -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ');
+        for file in $(find ./ -maxdepth 1 -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ');
         do
             if ! [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
                 echo "Error: input is not supported. Run 'cimage help' for more."
@@ -2722,7 +2722,7 @@ function cdocs(){
 
     if [[ $_all_files == true ]]; then
         _get_all="${input##*.}"
-        find $(pwd) -name "$_get_all" -type f | while read -r file; do
+        find ./ -maxdepth 1 -name "$_get_all" -type f | while read -r file; do
             pandoc "$file" -o "${file%.*}.${format##*.}"
         done
     else
@@ -2944,6 +2944,45 @@ function cmedia(){
             echo "Invalid audio output format: '$output'" >&2
             ;;
     esac
+}
+
+function mpdf(){
+    if ! which pdftk &>/dev/null; then
+        echo "merger pdf service not found. Installing now..."
+        inocon pdftk &>/dev/null
+        if which pdftk &>/dev/null; then
+            echo "Success installing merger pdf service..."
+            echo "Run again!"
+        else
+            echo "Failed installing merger pdf service..."
+        fi
+        return 1
+    fi
+    _check_file_pdf=($(find ./ -maxdepth 1 -type f -name "*.pdf" -printf "%f\n" | tr '\n' ' '))
+    if [[ ${#_check_file_pdf[@]} == 0 ]]; then
+        echo "File does not exist"
+        return 1
+    fi
+    if [[ -z $1 ]]; then
+        output="merged.pdf"
+    elif [[ -n ${1%.*} && -n ${1##*.} ]]; then
+        output="$1"
+    elif [[ $1 == "help" || $1 == "--help" || $1 == "-h" ]]; then
+        echo "Usage  : mpdf <option is optional>"
+        echo ""
+        echo "------------------------------------------------"
+        echo "Default output : 'merged.pdf'"
+        echo "Options:"
+        echo "    <filename>           Custom output"
+        echo "    help | -h | --help   Show this help message"
+        echo ""
+    fi
+    pdftk "${_check_file_pdf[@]}" cat output "$output"
+    if [[ -f $output ]]; then
+        echo "Complete merged pdf with output $output"
+    else
+        echo "Failed merged pdf"
+    fi
 }
 
 ################# END CONVERT - COMPRESS - MERGER #################
@@ -3517,6 +3556,7 @@ function ah() {
         echo "    cvideo                     Video converter"
         echo "    dl | download              Download with simple command"
         echo "    giit                       GIT Program make it simple"
+        echo "    mpdf                       Merge PDF file"
         echo "    rz                         Restart zsh"
         echo "    sctl                       Service of system"
         echo "    kali                       Kali Nethunter manager"
