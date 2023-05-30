@@ -3154,6 +3154,7 @@ function install-docker(){
             * ) echo "$not_support";break;;
         esac
     done
+    sudo usermod -aG docker $USER
 }
 
 function install-terraform(){
@@ -3185,6 +3186,98 @@ function install-terraform(){
 }
 
 ########################### END DEV-OPS ###########################
+
+function dbm(){
+    PS3="Select database guide: "
+    select database in mysql postgres exit; do
+        case $database in
+            mysql ) local _database_choosed="mysql";break;;
+            postgres) local _database_choosed="postgres";break;;
+            exit ) return 1;;
+            * ) echo -n "Try again!\n";;
+        esac
+    done
+
+    PS3="Select action to user: "
+    select act in "backup restore" "create database" "change password" "create privileges user" "create read user" "login"; do
+        case $act in
+        "login" )
+            if [[ $_database_choosed == "mysql" ]]; then
+                echo ""
+                echo "sudo -u postgres psql"
+            elif [[ $_database_choosed == "postgres" ]]; then
+                echo ""
+                echo "mysql -u root -p"
+            fi
+            break
+            ;;
+        "backup restore" ) 
+            if [[ $_database_choosed == "mysql" ]]; then
+                echo ""
+                echo "Backup Single  : mysqldump -u <username> -p <password> <database_name> > <backup_file.sql>"
+                echo "Backup All     : mysqldump -u <username> -p <password> --all-databases > <backup_file.sql>"
+                echo "Restore Single : mysql -u <username> -p <password> <database_name> < <backup_file.sql>"
+                echo "Restore All    : mysql -u <username> -p <password> < <backup_file.sql>"
+            elif [[ $_database_choosed == "postgres" ]]; then
+                echo ""
+                echo "Backup Single  : pg_dump -U <username> -d <database_name> -f <backup_file.sql>"
+                echo "Backup All     : pg_dumpall -U <username> -f <backup_file.sql>"
+                echo "Restore Single : psql -U <username> -d <database_name> -f <backup_file.sql>"
+                echo "Restore All    : psql -U <username> -f <backup_file.sql>"
+            fi
+            break
+            ;;
+        "create privileges user"      )
+            if [[ $_database_choosed == "mysql" ]]; then
+                echo ""
+                echo "CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';"
+                echo "GRANT ALL PRIVILEGES ON mydata.* TO 'username'@'localhost';"
+            elif [[ $_database_choosed == "postgres" ]]; then
+                echo ""
+                echo "CREATE USER username WITH PASSWORD 'password';"
+                echo "GRANT ALL PRIVILEGES ON DATABASE mydata TO username;"
+            fi
+            break
+            ;;
+        "create read user"       ) 
+            if [[ $_database_choosed == "mysql" ]]; then
+                echo ""
+                echo "CREATE USER 'myuser'@'localhost' IDENTIFIED BY 'mypassword';"
+                echo "GRANT SELECT ON mydata.* TO 'myuser'@'localhost';"
+            elif [[ $_database_choosed == "postgres" ]]; then
+                echo ""
+                echo "CREATE USER myuser WITH PASSWORD 'mypassword';"
+                echo "GRANT CONNECT ON DATABASE mydata TO myuser;"
+                echo "GRANT USAGE ON SCHEMA public TO myuser;"
+                echo "GRANT SELECT ON ALL TABLES IN SCHEMA public TO myuser;"
+            fi
+            break
+            ;;
+        "create database"   ) 
+            if [[ $_database_choosed == "mysql" ]]; then
+                echo ""
+                echo "CREATE DATABASE mydata;"
+            elif [[ $_database_choosed == "postgres" ]]; then
+                echo ""
+                echo "CREATE DATABASE mydata;"
+            fi
+            break
+            ;;
+        "change password"   ) 
+            if [[ $_database_choosed == "mysql" ]]; then
+                echo ""
+                echo "ALTER USER 'username'@'localhost' IDENTIFIED BY 'new_password';"
+            elif [[ $_database_choosed == "postgres" ]]; then
+                echo ""
+                echo "ALTER USER username WITH PASSWORD 'new_password';"
+            fi
+            break
+            ;;
+        "exit" ) return 1;;
+        * ) echo "Try again";;
+        esac
+    done
+}
 
 function ls(){
     if ! which exa &>/dev/null; then
@@ -3554,6 +3647,7 @@ function ah() {
         echo "    cdocs                      Document onverter"
         echo "    cimage                     Image converter"
         echo "    cmedia                     Music and Video converter"
+        echo "    dbm                        Database manager guide"
         echo "    dl | download              Download with simple command"
         echo "    giit                       GIT Program make it simple"
         echo "    mpdf                       Merge PDF file"
