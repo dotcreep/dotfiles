@@ -3660,6 +3660,16 @@ function ah() {
         fi
         return 1
     }
+    function git_helper(){
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    gpull                      Git pull"
+        echo "    gp                         Git push command"
+        echo "    gpush                      Git add, commit and pull command"
+        echo ""
+    }
     function ip_Manager() {
         echo "Usage: ah <option>"
         echo ""
@@ -3718,6 +3728,16 @@ alias cfs="cloudfile"
 alias dl="download"
 alias mon="monitoring"
 alias ts="troubleshoot"
+
+# Git
+alias gpull="git pull"
+alias gp="git push"
+function gpush(){
+    if [[ -z $1 ]]; then
+        echo "Add commentary of commit"
+    fi
+    git add . && git commit -m "$1" && git push
+}
 
 # Regular
 alias e="exit"
