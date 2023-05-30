@@ -3644,11 +3644,12 @@ alias ls="ls"
 alias "ls -la"="ls -la"
 alias "ls -l"="ls -l"
 alias grep="grep --color"
+alias newdcu="rm docker-compose.yaml && nano docker-compose.yaml"
 
 # Archive
 if which tar &>/dev/null; then
     alias kompres="tar -czvf"
-    alias ekstrak="tar -czvf"
+    alias ekstrak="tar -xzvf"
 fi
 
 # Proxy
