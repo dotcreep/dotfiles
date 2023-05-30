@@ -3237,6 +3237,7 @@ function dbm(){
                 echo "CREATE USER username WITH PASSWORD 'password';"
                 echo "GRANT ALL PRIVILEGES ON DATABASE mydata TO username;"
                 echo "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO <username>;"
+                echo "GRANT CREATE ON SCHEMA public TO <username>;"
             fi
             break
             ;;
