@@ -3352,7 +3352,7 @@ function ah() {
         echo ""
         return 1
     }
-    function package_Manager() {
+    function _package_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -3624,7 +3624,7 @@ function ah() {
     done
     
 
-    function proxy_Manager() {
+    function _proxy_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -3638,7 +3638,7 @@ function ah() {
         echo "    proxy                      Regular proxy command"
         return 1
     }
-    function helper_Manager() {
+    function _helper_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -3662,7 +3662,7 @@ function ah() {
         fi
         return 1
     }
-    function git_helper(){
+    function _git_helper(){
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -3672,7 +3672,7 @@ function ah() {
         echo "    gpush                      Git add, commit and pull command"
         echo ""
     }
-    function ip_Manager() {
+    function _ip_Manager() {
         echo "Usage: ah <option>"
         echo ""
         echo "Default command can used:"
@@ -3686,17 +3686,18 @@ function ah() {
         fi
         return 1
     }
-    while getopts "akdtiPpHh" opt; do
+    while getopts "agkdtiPpHh" opt; do
         case $opt in
         "a") _ansible_shortcut;break;;
         "k") _kubernetes_shortcut;break;;
         "d") _docker_shortcut;break;;
+        "g") _git_helper;break;;
         "t") _terraform_shortcut;break;;
         "n") _nmap_shortcut;break;;
-        "i") ip_Manager; break; ;;
-        "P") proxy_Manager; break; ;;
-        "p") package_Manager; break; ;;
-        "H") helper_Manager; break; ;;
+        "i") _ip_Manager; break; ;;
+        "P") _proxy_Manager; break; ;;
+        "p") _package_Manager; break; ;;
+        "H") _helper_Manager; break; ;;
         "h" | *) usage; break; ;;
         \? | :)
             echo "Invalid option" >&2; usage; exit 1; ;;
@@ -3761,6 +3762,7 @@ alias "ls -la"="ls -la"
 alias "ls -l"="ls -l"
 alias grep="grep --color"
 alias newdcu="rm docker-compose.yaml && nano docker-compose.yaml"
+function cz(){echo "" > $HOME/.zsh_history; echo "Clear history completed..";exec zsh;}
 
 # Archive
 if which tar &>/dev/null; then
