@@ -33,7 +33,7 @@ Minimize Shortcut | Shortcut | What for?
 
 **Specially AUR**
 
-Shortcut | Explain
+Shortcut | What for?
 --- | ---
 `auri` | `AUR Install`
 `auru` | `AUR Update`
