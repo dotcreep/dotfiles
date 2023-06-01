@@ -25,7 +25,7 @@ Minimize Shortcut | Shortcut | What for?
 `uuu` | `update && upgrade` | Update Repo and Upgrade Package
 `r` | `remove` | Uninstall Package
 `d` | `detail` | Detail Package
-`ro` | `remove orphan` | Remove Non-used Packages
+`o` | `orphan` | Remove Non-used Packages
 `cpkg` | `checkpkg` | Check Package
 `lpkg` | `listpkg` | List Package
 `hpkg` | `holdpkg` | Hold Package
