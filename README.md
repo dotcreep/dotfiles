@@ -68,8 +68,9 @@ VoidLinux | ✔️
 WSL | ✔️
 
 # Other Resources
-- [dotfiles](https://github.com/dotcreep/dotfiles) - My personal configuration files for linux and windows
-- [cheat-sheet](https://github.com/dotcreep/cheat-sheet) - Command Reference for various tools, maybe included on dotfiles
+- [dotFiles](https://github.com/dotcreep/dotfiles) - My personal configuration files for linux and windows.
+- [Cheat Sheet](https://github.com/dotcreep/cheat-sheet) - Command Reference for various tools, maybe included on dotfiles.
+- [Template](https://github.com/dotcreep/boilerplates) - Templates for any project.
 
 # Support Me on
 - [Trakteer](https://trakteer.id/dotcreep)
