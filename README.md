@@ -1,7 +1,6 @@
 Hi, there! I'm here.. 👋
 
-This Repository **dotfiles** contains my personal linux and windows config files. My **dotfiles** is configure more than one linux distribution. Example, you can use this dotfiles in termux, ubuntu, arch just 
-
+This Repository **dotfiles** contains my personal linux and windows config files. My **dotfiles** is configure more than one linux distribution. Example, you can use this dotfiles in termux, ubuntu, arch with same command. 'forget-script' is named of my configuration if you want forgeting all general command.
 
 # Icon
 I'm using [Nerd-Fonts](https://www.nerdfonts.com/) for displaying icon in my terminal. Currently, I'm using the **Caskaydia Cove Nerd Font Complete Mono Windows Compatible Regular** in terminal application.
@@ -49,14 +48,31 @@ Shortcut | What for?
 `cmedia` | Audio and Video Converter
 `cdocs` | Document Converter
 
-- And More you can see on script or use 'ah' for aliases help
+And More you can see on script or use 'ah' for aliases help
+
+# Support System
+
+System | Support
+--- | ---
+Alpine | ✔️
+Arch | ✔️
+Debian | ✔️
+Fedora | ✔️
+Mac | ❌
+Manjaro | ✔️
+OpenSUSE | ✔️
+RHEL | ✔️
+Termux | ✔️
+Ubuntu | ✔️
+VoidLinux | ✔️
+WSL | ✔️
 
 # Other Resources
-- [dotfiles](https://github.com/dotcreep/dotfiles)
-- [cheat-sheet](https://github.com/dotcreep/cheat-sheet)
+- [dotfiles](https://github.com/dotcreep/dotfiles) - My personal configuration files for linux and windows
+- [cheat-sheet](https://github.com/dotcreep/cheat-sheet) - Command Reference for various tools, maybe included on dotfiles
 
 # Support Me on
 - [Trakteer](https://trakteer.id/dotcreep)
 - [Ko-Fi](https://ko-fi.com/)
 
-Support my mission to create free, high-quality script for any think to make it easy with shortcut.
+Support my mission to create free, high-quality script for any think to make it easy.
