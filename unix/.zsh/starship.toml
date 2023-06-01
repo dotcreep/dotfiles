@@ -40,6 +40,7 @@ add_newline = false
 command_timeout = 500
 scan_timeout = 30
 right_format = ''
+
 #---
 
 [character]
@@ -142,7 +143,7 @@ disabled = false
 ssh_symbol = " "
 ssh_only = true
 style = "bg:#000000"
-format = '[[ $ssh_symbol$hostname ($version)](fg:#A0A9CB bg:#000000)]($style)'
+format = '[[ $ssh_symbol $hostname ($version)](fg:#A0A9CB bg:#000000)]($style)'
 
 [cmd_duration]
 disabled = false
@@ -155,7 +156,7 @@ style = "fg:#F6F1F1 bg:#0B5374"
 format = '[ $symbol $context]($style)'
 detect_files = ['docker-compose.yml', 'docker-compose.yaml', 'Dockerfile']
 disabled = false
-only_with_files = false
+only_with_files = true
 
 [kubernetes]
 symbol = "ﴱ "

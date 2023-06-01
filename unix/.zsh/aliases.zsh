@@ -3236,8 +3236,9 @@ function dbm(){
                 echo ""
                 echo "CREATE USER username WITH PASSWORD 'password';"
                 echo "GRANT ALL PRIVILEGES ON DATABASE mydata TO username;"
-                echo "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO <username>;"
-                echo "GRANT CREATE ON SCHEMA public TO <username>;"
+                echo "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO username;"
+                echo "GRANT CREATE ON SCHEMA public TO username;"
+                echo "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO username;"
             fi
             break
             ;;
@@ -3685,6 +3686,17 @@ function ah() {
             echo "    redns                      Flush DNS"
         fi
         return 1
+    }
+    function _batch_command(){
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    install-kubernetes-master  Install kubernetes master"
+        echo "    install-minikube           Install minikube"
+        echo "    install-ansible            Install ansible"
+        echo "    install-docker             Install docker"
+        echo "    install-terraform          Install terraform"
     }
     while getopts "agkdtiPpHh" opt; do
         case $opt in

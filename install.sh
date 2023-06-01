@@ -1,3 +1,4 @@
+[[ ! $(which zsh) || ! $(which starship) || ! $(which git) || ! $(which wget) ]] && (echo "Dependency are missing. Trying install 'wget git zsh starship'" ;return 1)
 [[ ! -d $HOME/.zsh-plugin ]] && mkdir -p $HOME/.zsh-plugin
 [[ ! -d $HOME/.config ]] && mkdir $HOME/.config
 [[ ! -d $HOME/.zsh-plugin/zsh-autosuggestions ]] && git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.zsh-plugin/zsh-autosuggestions
