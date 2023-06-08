@@ -1316,9 +1316,17 @@ function kubectl() {
         esac
     fi
     if ! which kubectl &>/dev/null && which minikube &>/dev/null; then
-        minikube kubectl $*
+        if [[ -z $2 ]]; then
+            minikube kubectl
+        else
+            minikube kubectl $*
+        fi
     elif which kubectl &>/dev/null && which minikube &>/dev/null; then
-        kubectl $*
+        if [[ -z $2 ]]; then
+            kubectl
+        else
+            kubectl $*
+        fi
     fi
 }
 
