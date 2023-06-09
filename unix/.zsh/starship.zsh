@@ -13,14 +13,6 @@ if [[ -f /etc/os-release || -f /etc/lsb-release || -f /etc/redhat-release ]]; th
   else
     DEVICE=""
   fi
-elif [[ -f /System/Library/CoreServices/SystemVersion.plist ]]; then
-  _system="macos"
-  _device=$(system_profiler SPHardwareDataType | awk '/Model Name/ {print $3,$4,$5,$6,$7}')
-  case $_device in
-    *MacBook*)     DEVICE="";;
-    *mini*)        DEVICE="󰇄";;
-    *)             DEVICE="";;
-  esac
 elif [[ -d /data/data/com.termux/files ]]; then
   _system=""
   export USER=$(whoami)
