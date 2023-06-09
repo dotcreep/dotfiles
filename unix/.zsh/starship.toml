@@ -153,7 +153,7 @@ format = '[[  $duration](fg:#FFFFFF bg:#000000)]($style)'
 [docker_context]
 symbol = ""
 style = "fg:#F6F1F1 bg:#0B5374"
-format = '[ $symbol $context]($style)'
+format = '[[ $symbol $context](fg:#F6F1F1 bg:#0B5374)]($style)'
 detect_files = ['docker-compose.yml', 'docker-compose.yaml', 'Dockerfile']
 disabled = false
 only_with_files = true
@@ -161,7 +161,7 @@ only_with_files = true
 [kubernetes]
 symbol = "ﴱ"
 style = "fg:#F6F1F1 bg:#0B5374"
-format = '[ $symbol $context\($namespace\)]($sytle) '
+format = '[[ $symbol $context\($namespace\)](fg:#F6F1F1 bg:#0B5374)]($sytle) '
 disabled = false
 
 [python]
