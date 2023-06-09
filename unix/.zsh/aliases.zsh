@@ -1285,7 +1285,7 @@ function docker-install() {
     fi
 }
 
-function kubectl() {
+function install-minikube() {
     if [[ $system == "termux" ]]; then
         echo "$not_support"
     fi
@@ -1314,19 +1314,7 @@ function kubectl() {
                     fi;;
             * ) return 1;;
         esac
-    fi
-    if ! which kubectl &>/dev/null && which minikube &>/dev/null; then
-        if [[ -z $2 ]]; then
-            minikube kubectl
-        else
-            minikube kubectl $*
-        fi
-    elif which kubectl &>/dev/null && which minikube &>/dev/null; then
-        if [[ -z $2 ]]; then
-            kubectl
-        else
-            kubectl $*
-        fi
+        echo "Success installing minikube"
     fi
 }
 
@@ -3064,6 +3052,25 @@ function install-kubernetes-master(){
     fi
 }
 
+function install-kubectl(){
+    if ! which kubectl &>/dev/null; then
+        if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
+            echo "kubectl not installed. Installing now..."
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+            echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+            sudo apt update
+            sudo apt install -y kubectl
+        elif [[ $_my_system == "amzn" || $_my_system == "fedora" || $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" || $_my_system == "centos" ]]; then
+            echo "kubectl not installed. Installing now..."
+            echo "[kubernetes]\nname=Kubernetes\nbaseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" > /etc/yum.repos.d/kubernetes.repo
+            sudo yum install -y kubectl
+        else
+            echo "$not_supported"
+        fi
+    else
+        echo "kubectl already installed"
+    fi
+}
 
 function install-minikube(){
     if which minikube &>/dev/null; then
@@ -3702,6 +3709,7 @@ function ah() {
         echo "------------------------------------------------"
         echo "    install-kubernetes-master  Install kubernetes master"
         echo "    install-minikube           Install minikube"
+        echo "    install-kubectl            Install kubectl"
         echo "    install-ansible            Install ansible"
         echo "    install-docker             Install docker"
         echo "    install-terraform          Install terraform"
