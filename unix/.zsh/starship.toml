@@ -161,7 +161,7 @@ only_with_files = true
 [kubernetes]
 symbol = "ﴱ"
 style = "fg:#F6F1F1 bg:#0B5374"
-format = '[[ $symbol $context\($namespace\)](fg:#F6F1F1 bg:#0B5374)]($sytle) '
+format = '[[ $symbol $context\($namespace\)](fg:#F6F1F1 bg:#0B5374)]($sytle)'
 disabled = false
 
 [python]
