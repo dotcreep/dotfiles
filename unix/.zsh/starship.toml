@@ -159,8 +159,9 @@ disabled = false
 only_with_files = true
 
 [kubernetes]
-symbol = "ﴱ "
-format = '[ $symbol $context\($namespace\)](bold purple) '
+symbol = "ﴱ"
+style = "fg:#F6F1F1 bg:#0B5374"
+format = '[ $symbol $context\($namespace\)]($sytle) '
 disabled = false
 
 [python]
@@ -175,7 +176,7 @@ pyenv_version_name = false
 pyenv_prefix = "pyenv"
 
 [aws]
-symbol = " "
+symbol = ""
 style = "fg:#F6F1F1 bg:#0B5374"
 format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 
