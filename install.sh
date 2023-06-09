@@ -6,3 +6,4 @@
 [[ ! -f $HOME/.zshrc ]] && ln -s ${PWD}/unix/.zshrc $HOME/.zshrc
 [[ ! -d $HOME/.zsh ]] && ln -s ${PWD}/unix/.zsh $HOME/.zsh
 [[ ! -d $HOME/.config/nvim/ ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
+exec zsh

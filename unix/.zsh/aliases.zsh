@@ -1564,7 +1564,7 @@ function sc() {
             ;;
         d)
             if [[ -z $(cat $file_config) ]]; then
-                echo "Error: No has ssh account"
+                echo "Error: Do not have ssh account"
                 return 1
             else
                 declare -A options=()
@@ -3057,6 +3057,7 @@ function install-kubectl(){
         if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
             echo "kubectl not installed. Installing now..."
             curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+            sudo cp /etc/apt/trusted.gpg /etc/apt/trusted.gpg.d
             echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
             sudo apt update
             sudo apt install -y kubectl
@@ -3076,10 +3077,7 @@ function install-minikube(){
     if which minikube &>/dev/null; then
         echo -n "Do you want reinstall Kubernetes (minikube) [y/N]? "
         read answer
-        if [[ $answer == "n" || $answer == "N" ]]; then
-            return 1
-        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
-            echo "Wrong answer!"
+        if [[ $answer != "y" || $answer != "Y" ]]; then
             return 1
         fi
     fi
@@ -3777,7 +3775,7 @@ alias v="nvim"
 alias p="ping"
 alias ijin="chmod +x"
 alias suser="sudo chmod u+s"
-alias zshrh="echo '' > $HOME/.zsh_history"
+alias zshrh="echo '' > $HOME/.zsh_history && exec zsh"
 alias unv="rm ~/.config/nvim/init.vim && nano ~/.config/nvim/init.vim"
 alias vz="vim ~/.zshrc"
 alias vv="vim ~/.vimrc"
