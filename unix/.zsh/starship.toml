@@ -140,7 +140,7 @@ format = '[[  $time](fg:#A0A9CB bg:#000000)]($style)'
 
 [hostname]
 disabled = false
-ssh_symbol = " "
+ssh_symbol = ""
 ssh_only = true
 style = "bg:#000000"
 format = '[[ $ssh_symbol $hostname ($version)](fg:#A0A9CB bg:#000000)]($style)'
