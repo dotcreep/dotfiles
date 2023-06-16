@@ -190,10 +190,10 @@ symbol = ""
 style = "fg:#F6F1F1 bg:#0B5374"
 format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 
-[gradle]
-symbol = ""
-style = "fg:#F6F1F1 bg:#0B5374"
-format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
+# [gradle]
+# symbol = ""
+# style = "fg:#F6F1F1 bg:#0B5374"
+# format = '[[ $symbol ($version)](fg:#F6F1F1 bg:#0B5374)]($style)'
 
 [lua]
 symbol = ""

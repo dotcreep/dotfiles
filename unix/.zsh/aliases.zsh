@@ -190,8 +190,10 @@ function updateandupgrade() {
     if [[ $system == "termux" ]]; then
         $pm update && $pm upgrade -y
     else
-        if [[ $pm == "apt" || $pm == "apk" ]]; then
+        if [[ $pm == "apt" ]]; then
             sudo $pm update && sudo $pm upgrade -y
+        elif [[ $pm == "apk" ]]; then
+            sudo $pm update && sudo $pm upgrade
         elif [[ $pm == "pacman" ]]; then
             sudo $pm -Syu
         elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
@@ -3299,6 +3301,10 @@ function ls(){
     if ! which exa &>/dev/null; then
         echo "Dependency not installed. Installing now..."
         inocon exa &>/dev/null
+        if ! which exa &>/dev/null; then
+            echo "Failed to install dependency.."
+            return 1
+        fi
         $0 $*
     else
         exa --icons --group-directories-first $*
@@ -3792,8 +3798,10 @@ function cz(){echo "" > $HOME/.zsh_history; echo "Clear history completed..";exe
 
 # Archive
 if which tar &>/dev/null; then
-    alias kompres="tar -czvf"
-    alias ekstrak="tar -xzvf"
+    alias compress="tar -czvf"
+    alias extract="tar -xzvf"
+    alias cm="tar -czvf"
+    alias ex="tar -xzvf"
 fi
 
 # Proxy
