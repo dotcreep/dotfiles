@@ -202,6 +202,8 @@ fi
 if which docker &>/dev/null; then
     alias dcu='docker compose up -d'
     alias dcd='docker compose down'
+    alias dps='docker ps'
+    alias dpss='docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"'
     alias dbl='docker build'
     alias dcin='docker container inspect'
     alias dcls='docker container ls'
