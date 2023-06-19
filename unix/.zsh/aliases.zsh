@@ -3134,9 +3134,6 @@ function install-docker(){
         read answer
         if [[ $answer == "n" || $answer == "N" ]]; then
             return 1
-        elif [[ $answer != "n" || $answer != "N" || $answer != "y" || $answer != "Y" ]]; then
-            echo "Wrong answer!"
-            return 1
         fi
     fi
     for distro in ubuntu debian fedora rhel redhat centos; do
