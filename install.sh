@@ -1,5 +1,6 @@
 [[ ! $(which starship) ]] && curl -sS https://starship.rs/install.sh | sh
-[[ ! $(which zsh) || ! $(which git) || ! $(which wget) ]] && (echo "Dependency are missing. Trying install 'wget git zsh'" ;return 1)[[ ! -d $HOME/.zsh-plugin ]] && mkdir -p $HOME/.zsh-plugin
+[[ ! $(which zsh) || ! $(which git) || ! $(which wget) ]] && (echo "Dependency are missing. Trying install 'wget git zsh'" ;return 1)
+[[ ! -d $HOME/.zsh-plugin ]] && mkdir -p $HOME/.zsh-plugin
 [[ ! -d $HOME/.config ]] && mkdir $HOME/.config
 [[ ! -d $HOME/.zsh-plugin/zsh-autosuggestions ]] && git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.zsh-plugin/zsh-autosuggestions
 [[ ! -d $HOME/.zsh-plugin/zsh-syntax-highlighting ]] && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.zsh-plugin/zsh-syntax-highlighting
