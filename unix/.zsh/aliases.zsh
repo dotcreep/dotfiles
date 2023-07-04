@@ -3249,6 +3249,11 @@ function install-docker(){
                 fi
                 install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                 sudo systemctl start docker
+                if which usermod &>/dev/null; then
+                    sudo usermod -aG docker $USER
+                else
+                    echo "Set user manually to group 'docker'"
+                fi
                 echo "Completed install docker on system..."
                 break;;
             ubuntu | debian )
@@ -3263,12 +3268,16 @@ function install-docker(){
                   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
                 update
                 inocon install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                if which usermod &>/dev/null; then
+                    sudo usermod -aG docker $USER
+                else
+                    echo "Set user manually to group 'docker'"
+                fi
                 echo "Completed install docker on system..."
                 break;;
             * ) echo "$not_support";break;;
         esac
     done
-    sudo usermod -aG docker $USER
 }
 
 function install-terraform(){
