@@ -446,6 +446,108 @@ function snapr(){
 ########################### END PACKAGE ###########################
 
 ############################### IPs ###############################
+function getip(){
+    if ! which curl &>/dev/null; then
+        install curl &>/dev/null
+    fi
+    function _getIP_HELP_(){
+        echo "Usage : getip [options] <domain>";
+        echo "------------------------------------------------"
+        echo "    -h        Show this message"
+        echo "    -e        Use eksternal / online server"
+        echo "    -i        Use internal / local machine"
+
+    }
+    online=false
+    lokal=false
+    while getopts "eih" opt; do
+        case $opt in
+        "e") online=true;break;;
+        "i") lokal=true;break;;
+        "h" | *) _getIP_HELP_; break; ;;
+        \? | :) echo "Invalid option" >&2; usage; exit 1; ;;
+        esac
+    done
+
+    if [[ -z $1 ]]; then
+        _getIP_HELP_
+        return 1
+    fi
+
+    if ping -c 1 "9.9.9.9" &>/dev/null; then
+        if [[ $online == true ]]; then
+            shift
+            if [[ $(date +%s) -le $_timeout ]]; then
+                echo "Too many request, please wait in $(( $_timeout - $(date +%s)))s"
+                return 1
+            else
+                for i in "$@"; do
+                    local header="User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
+                    local ref="https://www.duckduckgo.com"
+                    local result=$(curl -s -i -H "$header" -e "$ref" https://www.courier.com/api/tools/domain-ip-lookup/\?domain=${i})
+                    local _status_code=$(echo "$result" | grep -oP "HTTP/2 \K[0-9]+")
+                    local _body=$(echo "$result" | grep -oP '\d+\.\d+\.\d+\.\d+' | uniq | tr '\n' ',' | sed 's/,$//')
+                    if [[ $_status_code -eq 200 ]]; then
+                        if [[ -z $result ]]; then
+                            echo " - $i : Error Access"
+                        else
+                            echo " - $i : $_body"
+                        fi
+                    elif [[ $_status_code -eq 429 ]]; then
+                        _timeout=$(($(date +%s) + 60))
+                        echo "Too many request, please wait in $(( $_timeout - $(date +%s)))s"
+                        break
+                    fi
+                done
+            fi
+        elif [[ $lokal == true ]]; then
+            if ! which dig &>/dev/null; then
+                echo "Tools not installed. Installing now..."
+                inocon dnsutils &>/dev/null
+                if which dig &>/dev/null; then
+                    echo "Success installing tools.."
+                else
+                    echo "Failed installing"
+                fi
+            fi
+            shift
+            local __ARRAY__=()
+            for i in "$@"; do
+                local result=$(dig $i | grep -A 100 "ANSWER SECTION:" | grep $i | grep -oP '\d+\.\d+\.\d+\.\d+' | uniq | tr '\n' ',' | sed 's/,$//')
+                if [[ -z $result ]]; then
+                    echo " - $i : Error Access or Blocked by Internal"
+                    __ARRAY__+=($i)
+                else
+                    echo " - $i : $result"
+                fi
+            done
+            if [[ -n ${__ARRAY__[@]} ]]; then
+                echo ""
+                echo -ne "Do you want check online the 'error domain' list? [y/N] "
+                read checklist_url
+                case $checklist_url in
+                    y | Y ) getip -e ${__ARRAY__[@]};;
+                    * ) break;;
+                esac
+            fi
+        else
+            for i in "$@"; do
+                local result=$(ping -c 1 "$i" 2>/dev/null | grep -oP '\d+\.\d+\.\d+\.\d+' | uniq)
+                if [[ -z $result ]]; then
+                    echo " - $i : Error Access"
+                elif [[ $result == "127.0.0.1" || $result == "0.0.0.0" ]]; then
+                    echo " - $i : Blocked"
+                else
+                    echo " - $i : $result"
+                fi
+            done
+        fi
+    else
+        echo "Check internet connection.."
+        return 1
+    fi
+}
+
 function myip() {
     if ! which ip &>/dev/null; then
         install ip-utils -y &>/dev/null
@@ -3695,6 +3797,7 @@ function ah() {
         echo "Default command can used:"
         echo "------------------------------------------------"
         echo "    cf | cloudflare            Cloudflare operation"
+        echo "    getip                      Get IP Address from Local or Online ISP"
         echo "    myip                       Check my ip"
         echo "    netch                      Change IP and DNS local"
         echo "    sc                         Connect SSH with database"

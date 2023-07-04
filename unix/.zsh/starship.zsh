@@ -32,7 +32,6 @@ case $_system in
   *gentoo*)                ICON="";;
   *kali*)                  ICON="ﴣ";;
   *linuxmint*)             ICON="";;
-  *macos*)                 ICON="";;
   *mageia*)                ICON="";;
   *manjaro*)               ICON="";;
   *nixos*)                 ICON="";;

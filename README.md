@@ -5,10 +5,9 @@ This Repository **dotfiles** contains my personal linux and windows config files
 # Icon
 I'm using [Nerd-Fonts](https://www.nerdfonts.com/) for displaying icon in my terminal. Currently, I'm using the **Caskaydia Cove Nerd Font Complete Mono Windows Compatible Regular** in terminal application.
 
-# Dependency
-Package need is `wget zsh starship git`
-
 # Install
+Need dependency `wget zsh starship git`
+
 ```
 git clone https://github.com/dotcreep/dotfiles.git && (cd dotfiles; bash install.sh)
 ```
