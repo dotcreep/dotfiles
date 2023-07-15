@@ -3247,7 +3247,7 @@ function install-docker(){
                 else
                     sudo yum-config-manager --add-repo https://download.docker.com/linux/${distro}/docker-ce.repo
                 fi
-                install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                inocon docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                 sudo systemctl start docker
                 if which usermod &>/dev/null; then
                     sudo usermod -aG docker $USER
@@ -3258,7 +3258,7 @@ function install-docker(){
                 break;;
             ubuntu | debian )
                 update
-                inocon install ca-certificates curl gnupg
+                inocon ca-certificates curl gnupg
                 sudo install -m 0755 -d /etc/apt/keyrings
                 curl -fsSL https://download.docker.com/linux/${distro}/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
                 sudo chmod a+r /etc/apt/keyrings/docker.gpg
@@ -3267,7 +3267,7 @@ function install-docker(){
                   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
                   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
                 update
-                inocon install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                inocon docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                 if which usermod &>/dev/null; then
                     sudo usermod -aG docker $USER
                 else
@@ -3455,6 +3455,89 @@ function troubleshoot() {
             ;;
         esac
     done
+}
+
+function dlc(){
+    if ! which ssh &>/dev/null; then
+        echo "Dependency is not installed. Installing now..."
+        inocon openssh &>/dev/null
+        return 1
+    fi
+    file_config=$HOME/.scrc
+    if [[ ! -f $HOME/.scrc ]]; then
+        touch $file_config
+    fi
+    function check() {
+        local port=$1
+        if ! [[ $port =~ ^[0-9]+$ ]]; then
+            echo "[!] Your input is not valid"
+            return 1
+        fi
+        if (($port < 1 || $port > 65535)); then
+            echo "[!] Only port 1 - 65535"
+            return 1
+        fi
+    }
+    declare -A options=()
+    while read -r line; do
+        options["$line"]=$line
+    done <"$file_config"
+
+    PS3="Choose account: "
+    select option in "${options[@]}"; do
+        if [[ -n $option ]]; then
+            account_ssh=${options["$option"]}
+            break
+        else
+            echo "[!] Invalid option. Try again!"
+        fi
+    done
+    echo -n "Custom ssh port [22]: "
+    read port
+    if [[ -n $port ]]; then
+        check $port
+    else
+        port=22
+    fi
+    clear
+    for url in $@; do
+        name_files=$(basename $url)
+        echo "Download file $name_files"
+        ssh -p $port $account_ssh "mkdir -p ./download; wget -O ./download/$name_files $url -q --show-progress"
+        echo "\nGet data from cloud"
+        scp -P $port $account_ssh:download/$name_files ./
+        echo "Downloaded: $name_files"
+        echo "\nRemove file on cloud"
+        ssh -p $port $account_ssh "rm ./download/$name_files; [[ ! -f ./download/$name_files ]] && echo -ne 'Success delete $name_files\n\n' || echo -ne 'Failed to deletion\n\n'"
+    done
+}
+
+function tax(){
+    if [[ -z $1 ]]; then
+        echo "Only indonesian [!]"
+        echo "tax <price> | calculate tax of product"
+    fi
+    local input=$1
+    local customs=7.5
+    local now_tax=11
+    local admin_fee=15000
+    local handle_fee=30000
+    local tax_admin=$(awk "BEGIN {printf \"%.2f\", $admin_fee * $now_tax / 100}")
+    
+
+
+    local customs_totals=$(awk "BEGIN {printf \"%.2f\", $input * $customs / 100}")
+    local customs_tax=$(awk "BEGIN {printf \"%.2f\", $customs_totals * $now_tax / 100}")
+    local total=$(awk "BEGIN {printf \"%.2f\", $input + $customs_totals + $customs_tax + $admin_fee + $handle_fee + $tax_admin}")
+    local tax_total=$(awk "BEGIN {printf \"%.2f\", $total - $input}")
+
+    local formated_price="Rp $(printf "%'d" $input | sed 's/\B\([0-9]\{3\}\)\>/.\1/g')"
+    local formated_tax="Rp $(printf "%'d" $tax_total | sed 's/\B\([0-9]\{3\}\)\>/.\1/g')"
+    local formated_total="Rp $(printf "%'d" $total | sed 's/\B\([0-9]\{3\}\)\>/.\1/g')"
+
+    echo "Price     : $formated_price"
+    echo "Tax       : $formated_tax"
+    echo "Total Pay : $formated_total"
 }
 
 function ah() {
