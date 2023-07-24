@@ -3255,6 +3255,7 @@ function install-docker(){
                     echo "Set user manually to group 'docker'"
                 fi
                 echo "Completed install docker on system..."
+                sudo usermod -aG docker $USER
                 break;;
             ubuntu | debian )
                 update
@@ -3274,6 +3275,7 @@ function install-docker(){
                     echo "Set user manually to group 'docker'"
                 fi
                 echo "Completed install docker on system..."
+                sudo usermod -aG docker $USER
                 break;;
             * ) echo "$not_support";break;;
         esac

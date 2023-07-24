@@ -36,7 +36,7 @@ $hostname\
 #---
 
 add_newline = false
-command_timeout = 500
+command_timeout = 2000
 scan_timeout = 30
 right_format = ''
 
