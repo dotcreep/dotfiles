@@ -1,12 +1,12 @@
 Hi, there! I'm here.. 👋
 
-This Repository **dotfiles** contains my personal linux and windows config files. My mission for **dotfiles** is configured for any linux distribution. Example, you can use this dotfiles in termux, ubuntu, arch, etc with same command. Forget package manager and some command, make easy your command with same command at any distribution.
+This Repository **dotfiles** contains my personal linux and windows config files. My mission for **dotfiles** is configured for any linux distribution. Example, you can use this dotfiles in termux, ubuntu, arch, etc with same command. Forget package manager and some command, make it easy with one command on any distribution.
 
 # Icon
 I'm using [Nerd-Fonts](https://www.nerdfonts.com/) for displaying icon in my terminal. Currently, I'm using the **Caskaydia Cove Nerd Font Complete Mono Windows Compatible Regular** in terminal application.
 
 # Install
-Need dependency `wget zsh starship git`
+Need dependency `wget zsh git`
 
 ```
 git clone https://github.com/dotcreep/dotfiles.git && (cd dotfiles; bash install.sh)

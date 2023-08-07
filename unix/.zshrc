@@ -3,11 +3,17 @@ HISTFILE=$HOME/.zsh_history
 HISTSIZE=50000
 SAVEHIST=10000
 
+# Add your on custom alias in ~/.zsh-custom
+if [[ -d $HOME/.zsh-custom ]]; then
+    for zsh_custom in $HOME/.zsh-custom/*.zsh; do
+        [[ -f "$zsh_custom" ]] && source "$zsh_custom"
+    done
+fi
+
 # ZSH + Starship Configuration
-[[ -f $HOME/.zsh/aliases.zsh ]] && source $HOME/.zsh/aliases.zsh
-[[ -f $HOME/.zsh/aliases-devops.zsh ]] && source $HOME/.zsh/aliases-devops.zsh
-[[ -f $HOME/.zsh/aliases-pentest.zsh ]] && source $HOME/.zsh/aliases-pentest.zsh
-[[ -f $HOME/.zsh/starship.zsh ]] && source $HOME/.zsh/starship.zsh
+for zsh in $HOME/.zsh/*.zsh; do
+    [[ -f "$zsh" ]] && source "$zsh"
+done
 [[ -f $HOME/.zsh-plugin/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
     source $HOME/.zsh-plugin/zsh-autosuggestions/zsh-autosuggestions.zsh
 [[ -f $HOME/.zsh-plugin/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
@@ -24,6 +30,3 @@ bindkey "\e[6~" history-beginning-search-forward # Page Down
 
 # Run Starship
 eval "$(starship init zsh)"
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"

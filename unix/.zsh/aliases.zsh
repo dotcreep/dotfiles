@@ -471,13 +471,13 @@ function getip(){
         echo "    -i        Use internal / local machine"
 
     }
-    online=false
-    lokal=false
+    local online=false
+    local lokal=false
     while getopts "eih" opt; do
         case $opt in
         "e") online=true;break;;
         "i") lokal=true;break;;
-        "h" | *) _getIP_HELP_; break; ;;
+        "h" | *) _getIP_HELP_;return 1;break;;
         \? | :) echo "Invalid option" >&2; usage; exit 1; ;;
         esac
     done
@@ -490,6 +490,7 @@ function getip(){
     if ping -c 1 "9.9.9.9" &>/dev/null; then
         if [[ $online == true ]]; then
             shift
+            echo "$*"
             if [[ $(date +%s) -le $_timeout ]]; then
                 echo "Too many request, please wait in $(( $_timeout - $(date +%s)))s"
                 return 1
