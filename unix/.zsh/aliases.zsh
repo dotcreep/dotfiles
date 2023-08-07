@@ -95,7 +95,7 @@ function upgrade() {
             sudo $pm -Su
         elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
             sudo $pm update
-        elif [[ $pm == "apt" || $pm == "pkg" ]]; then
+        elif [[ $pm == "apt" || $pm == "pkg" || $pm == "apk" ]]; then
             sudo $pm upgrade
         else
             echo $not_support
@@ -297,7 +297,7 @@ function holdpkg() {
     fi
 }
 
-function _install_aur(){
+function install-aur(){
     if [[ $pm != "pacman" ]]; then
         echo "$not_support"
         return 1
@@ -309,34 +309,47 @@ function _install_aur(){
         git clone https://aur.archlinux.org/yay.git
         cd yay
         makepkg -si
+    else
+        echo "Already installed"
     fi
 }
 
 function auri(){
-    _install_aur
+    if ! which yay &>/dev/null; then
+        install-aur
+    fi
     yay -S $*
 }
+
 function auru(){
-    _install_aur
+    if ! which yay &>/dev/null; then
+        install-aur
+    fi
     yay -Sy $*
 }
 
 function auruu(){
-    _install_aur
+    if ! which yay &>/dev/null; then
+        install-aur
+    fi
     yay -Syu $*
 }
 
 function aurs(){
-    _install_aur
+    if ! which yay &>/dev/null; then
+        install-aur
+    fi
     yay -Ss $*
 }
 
 function aurr(){
-    _install_aur
+    if ! which yay &>/dev/null; then
+        install-aur
+    fi
     yay -Runscd $*
 }
 
-function _install_snap(){
+function install-snap(){
     if [[ $system == "termux" ]]; then
         echo "$not_support"
         return 1
@@ -381,71 +394,71 @@ function _install_snap(){
 }
 
 function snapi(){
-    _install_snap
-    if which snap &>/dev/null; then
-        sudo snap install $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    sudo snap install $*
 }
 
 function snapu(){
-    _install_snap
-    if which snap &>/dev/null; then
-        sudo snap refresh $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    sudo snap refresh $*
 }
 
 function snapv(){
-    _install_snap
-    if which snap &>/dev/null; then
-        sudo snap revert $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    sudo snap revert $*
 }
 
 function snaps(){
-    _install_snap
-    if which snap &>/dev/null; then
-        snap find $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    snap find $*
 }
 
 function snapl(){
-    _install_snap
-    if which snap &>/dev/null; then
-        snap list $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    snap list $*
 }
 
 function snapla(){
-    _install_snap
-    if which snap &>/dev/null; then
-        snap list --all $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    snap list --all $*
 }
 
 function snapon(){
-    _install_snap
-    if which snap &>/dev/null; then
-        sudo snap enable $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    sudo snap enable $*
 }
 
 function snapoff(){
-    _install_snap
-    if which snap &>/dev/null; then
-        sudo snap disable $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    sudo snap disable $*
 }
 
 function snapr(){
-    _install_snap
-    if which snap &>/dev/null; then
-        sudo snap remove $*
+    if ! which snap &>/dev/null; then
+        install-snap
     fi
+    sudo snap remove $*
 }
 
 ########################### END PACKAGE ###########################
 
-############################### IPs ###############################
+ ############################ NETTOOL #############################
 function getip(){
     if ! which curl &>/dev/null; then
         install curl &>/dev/null
@@ -1210,7 +1223,7 @@ function speeds() {
         fi
     fi
 }
-############################# END IPs #############################
+########################### END NETTOOL ###########################
 
 ############################# SERVICE #############################
 
@@ -1346,80 +1359,6 @@ function kali() {
             ;;
         esac
     done
-}
-
-function docker-install() {
-    if [[ $system == "termux" ]]; then
-        echo "$not_support"
-    fi
-    if ! command -v docker &>/dev/null; then
-        if [[ -f /etc/os-release ]]; then
-          myos=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
-        elif [[ -f /etc/lsb-release ]]; then
-          myos=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
-        elif [[ -f /etc/redhat-release ]]; then
-          myos=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
-        fi
-        if [[ $pm == "apt" ]]; then
-            echo "Docker service not found. Installing now..."
-            sudo apt update &&
-                sudo apt install -y ca-certificates curl gnupg2 software-properties-common
-            curl -fsSL https://download.docker.com/linux/$myos/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            echo \
-                "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/$myos \
-                $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-            sudo apt update &&
-                sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx docker-compose
-            sudo usermod -aG docker $USER
-        elif [[ $pm == "yum" ]]; then
-            if [[ $myos == "centos" ]]; then
-                sudo yum install -y yum-utils
-                sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-                sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx docker-compose
-                sudo usermod -aG docker $USER
-            elif [[ $myos == "fedora" ]]; then
-                sudo dnf install -y dnf-plugins-core
-                sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-                sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx docker-compose
-                sudo usermod -aG docker $USER
-            fi
-        else
-            echo "$not_support"
-        fi
-    fi
-}
-
-function install-minikube() {
-    if [[ $system == "termux" ]]; then
-        echo "$not_support"
-    fi
-    if ! which minikube &>/dev/null; then
-        if [[ $system == "windows" ]]; then
-            echo "Detected using WSL 1! May you cannot using it, try out on WSL 2."
-            sleep 3
-        fi
-        echo -ne "minikube not found. Do you want install [y/N]? "
-        read response
-        case $response in
-            y|Y )   if [[ $system == "linux" ]]; then
-                        system_architecture=$(uname -m)
-                        case $system_architecture in
-                            x86_64)     curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-                                        sudo install minikube-linux-amd64 /usr/local/bin/minikube
-                                        ;;
-                            armv7l)     curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-arm64
-                                        sudo install minikube-linux-arm64 /usr/local/bin/minikube
-                                        ;;
-                            aarch64)    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-arm64
-                                        sudo install minikube-linux-arm64 /usr/local/bin/minikube
-                                        ;;
-                            *)          echo "See https://minikube.sigs.k8s.io/docs/start/";;
-                        esac
-                    fi;;
-            * ) return 1;;
-        esac
-        echo "Success installing minikube"
-    fi
 }
 
 function sctl() {
@@ -3085,232 +3024,32 @@ function mpdf(){
     fi
 }
 
+function subs(){
+    for subs in "."/*.vtt; do
+        if [[ -z $subs ]]; then
+            echo "VTT file not exists"
+            return 0
+        fi
+        local base_name=$(basename $subs .vtt)
+        local output_file="$base_name.srt"
+
+        echo -ne "Convert ${base_name}.vtt to ${base_name}.srt"
+        
+        sed 's/align:start position:0%//g' "$subs" | awk -F '[<>]' '{
+            if (NF > 2 && $2 ~ /^[0-9:,]+$/) {
+                printf "%s --> %s\n", $2, $4
+            } else if (NF > 2) {
+                printf "%s", $3
+            } else {
+                print
+            }
+        }' > "$output_file"
+
+        [[ -f ./"${base_name}.srt" ]] && echo " Success.." || echo " Failure.."
+    done
+}
+
 ################# END CONVERT - COMPRESS - MERGER #################
-############################# DEV-OPS #############################
-
-function install-kubernetes-master(){
-    if which kubeadm &>/dev/null; then
-        echo -n "Do you want reinstall Kubernetes (master) [y/N]? "
-        read answer
-        if [[ $answer == "n" || $answer == "N" ]]; then
-            return 1
-        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
-            echo "Wrong answer!"
-            return 1
-        fi
-    fi
-    echo -n "Do you want install Kubernetes (master) [y/N]? "
-    read answer
-    if [[ $answer == "y" || $answer == "Y" ]]; then
-        if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
-            echo "Installing Kubernetes (master)"
-            update
-            inocon apt-transport-https ca-certificates curl
-            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-            sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
-            update
-            inocon kubeadm kubelet kubectl
-            holdpkg kubeadm kubelet kubectl
-            echo "Completed install kubernetes on system..."
-        elif [[ $_my_system == "centos" ]]; then
-            echo "Installing Kubernetes (master)"
-            update
-            inocon epel-release
-            inocon kubeadm kubelet kubectl
-            sudo systemctl enable --now kubelet
-            echo "Completed install kubernetes on system..."
-        elif [[ $_my_system == "fedora" || $_my_system == "rhel" || $_my_system == "redhat" || $_my_system == "centos" ]]; then
-            echo "Installing Kubernetes (master)"
-            update
-            sudo sh -c 'echo "[kubernetes]" > /etc/yum.repos.d/kubernetes.repo'
-            sudo sh -c 'echo "name=Kubernetes" >> /etc/yum.repos.d/kubernetes.repo'
-            sudo sh -c 'echo "baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64" >> /etc/yum.repos.d/kubernetes.repo'
-            sudo sh -c 'echo "enabled=1" >> /etc/yum.repos.d/kubernetes.repo'
-            sudo sh -c 'echo "gpgcheck=1" >> /etc/yum.repos.d/kubernetes.repo'
-            sudo sh -c 'echo "repo_gpgcheck=1" >> /etc/yum.repos.d/kubernetes.repo'
-            sudo sh -c 'echo "gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" >> /etc/yum.repos.d/kubernetes.repo'
-            inocon kubeadm kubelet kubectl
-            sudo systemctl enable --now kubelet
-            echo "Completed install kubernetes on system..."
-        elif [[ $_my_system == "arch" || $_my_system == "manjaro" ]]; then
-            auri kubernetes-bin
-            echo "Completed install kubernetes on system..."
-        elif [[ $_my_system == "amzn" ]]; then
-            sudo amazon-linux-extras install epel
-            sudo yum install -y kubeadm kubelet kubectl
-            sudo systemctl enable --now kubelet
-            echo "Completed install kubernetes on system..."
-        else
-            echo "$not_support"
-            return 1
-        fi
-        update
-        echo "Installing complete"
-        echo ""
-        echo "Run manual for master: "
-        echo '- "sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-advertise-address=<IP Address Master>"'
-        echo '- "mkdir -p $HOME/.kube && sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && sudo chown $(id -u):$(id -g) $HOME/.kube/config"'
-        echo ""
-        echo "Run for cluster : "
-        echo '- "kubeadm join"'
-    fi
-}
-
-function install-kubectl(){
-    if ! which kubectl &>/dev/null; then
-        if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
-            echo "kubectl not installed. Installing now..."
-            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-            sudo cp /etc/apt/trusted.gpg /etc/apt/trusted.gpg.d
-            echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-            sudo apt update
-            sudo apt install -y kubectl
-        elif [[ $_my_system == "amzn" || $_my_system == "fedora" || $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" || $_my_system == "centos" ]]; then
-            echo "kubectl not installed. Installing now..."
-            echo "[kubernetes]\nname=Kubernetes\nbaseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" > /etc/yum.repos.d/kubernetes.repo
-            sudo yum install -y kubectl
-        else
-            echo "$not_supported"
-        fi
-    else
-        echo "kubectl already installed"
-    fi
-}
-
-function install-minikube(){
-    if which minikube &>/dev/null; then
-        echo -n "Do you want reinstall Kubernetes (minikube) [y/N]? "
-        read answer
-        if [[ $answer != "y" || $answer != "Y" ]]; then
-            return 1
-        fi
-    fi
-    echo -n "Do you want install Kubernetes (minikube) [y/N]? "
-    read answer_one
-    if [[ $answer_one == "y" || $answer_one == "Y" ]]; then
-        if [[ $_my_system == "ubuntu" || $_my_system == "debian" || $_my_system == "amzn" || $_my_system == "fedora" || $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" || $_my_system == "centos" ]]; then
-            curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-            sudo chmod +x minikube-linux-amd64
-            if [[ -d /usr/local/bin/ ]]; then
-                sudo mv minikube-linux-amd64 /usr/local/bin/minikube
-            elif [[ -d /usr/bin/ ]]; then
-                sudo mv minikube-linux-amd64 /usr/bin/minikube
-            fi
-            minikube version
-            echo "Completed install minikube on system..."
-        elif [[ $_my_system == "arch" || $_my_system == "manjaro" ]]; then
-            yay -S minikube
-            minikube version
-            echo "Completed install minikube on system..."
-        else
-            echo "$not_support"
-        fi
-    fi
-}
-
-function install-ansible(){
-    if which ansible &>/dev/null; then
-        echo -n "Do you want reinstall Ansible [y/N]? "
-        read answer
-        if [[ $answer == "n" || $answer == "N" ]]; then
-            return 1
-        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
-            echo "Wrong answer!"
-            return 1
-        fi
-    fi
-    for distro in ubuntu debian amzn fedora rhel redhat centos; do
-        if [[ $distro == $_my_system ]]; then
-            echo "Installing ansible now..."
-            install ansible
-            ansible --version
-            echo "Completed install ansible on system..."
-            break
-        fi
-    done
-}
-
-function install-docker(){
-    if which docker &>/dev/null; then
-        echo -n "Do you want reinstall docker [y/N]? "
-        read answer
-        if [[ $answer == "n" || $answer == "N" ]]; then
-            return 1
-        fi
-    fi
-    for distro in ubuntu debian fedora rhel redhat centos; do
-        case $distro in
-            centos | rhel | redhat | fedora )
-                inocon yum-utils
-                if [[ $distro == "redhat" ]]; then
-                    sudo yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
-                else
-                    sudo yum-config-manager --add-repo https://download.docker.com/linux/${distro}/docker-ce.repo
-                fi
-                inocon docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-                sudo systemctl start docker
-                if which usermod &>/dev/null; then
-                    sudo usermod -aG docker $USER
-                else
-                    echo "Set user manually to group 'docker'"
-                fi
-                echo "Completed install docker on system..."
-                sudo usermod -aG docker $USER
-                break;;
-            ubuntu | debian )
-                update
-                inocon ca-certificates curl gnupg
-                sudo install -m 0755 -d /etc/apt/keyrings
-                curl -fsSL https://download.docker.com/linux/${distro}/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-                sudo chmod a+r /etc/apt/keyrings/docker.gpg
-                echo \
-                  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${distro} \
-                  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-                  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-                update
-                inocon docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-                if which usermod &>/dev/null; then
-                    sudo usermod -aG docker $USER
-                else
-                    echo "Set user manually to group 'docker'"
-                fi
-                echo "Completed install docker on system..."
-                sudo usermod -aG docker $USER
-                break;;
-            * ) echo "$not_support";break;;
-        esac
-    done
-}
-
-function install-terraform(){
-    if which terraform &>/dev/null; then
-        echo -n "Do you want reinstall Terraform [y/N]? "
-        read answer
-        if [[ $answer == "n" || $answer == "N" ]]; then
-            return 1
-        elif [[ $answer != "n" || $answer != "N" && $answer != "y" || $answer != "Y" ]]; then
-            echo "Wrong answer!"
-            return 1
-        fi
-    fi
-    for distro in ubuntu debian amzn fedora rhel redhat centos arch manjaro; do
-        case $distro in
-            rhel | redhat )
-                    install epel-release && install terraform
-                    break;;
-            ubuntu | debian | amzn | fedora )
-                    install terraform
-                    break;;
-            arch | manjaro )
-                    auri terraform
-                    break;;
-            * ) echo "$not_support"
-                    break;;
-        esac
-    done
-}
-
-########################### END DEV-OPS ###########################
 
 function dbm(){
     PS3="Select database guide: "
@@ -3548,11 +3287,18 @@ function ah() {
         echo ""
         echo "Options:"
         echo "------------------------------------------------"
-        echo "    -H    Show helper with simpler command"
+        echo " Get all help command with this description"
+        echo "    -a    Ansible"
+        echo "    -k    Kubernetes"
+        echo "    -d    docker"
+        echo "    -g    Git"
+        echo "    -t    Terraform"
+        echo "    -n    Nmap"
+        echo "    -i    IP Manager"
+        echo "    -P    Proxy Manager"
+        echo "    -p    Package Manager"
+        echo "    -H    Show simple command"
         echo "    -h    Show this help message"
-        echo "    -i    Show ip manager helper"
-        echo "    -p    Show package manager helper"
-        echo "    -P    Show proxy manager helper"
         for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
             if [[ $_sup_sys == $_my_system ]]; then
                 echo "    -a    Show Ansible command"
@@ -3565,6 +3311,7 @@ function ah() {
         echo ""
         return 1
     }
+
     function _package_Manager() {
         echo "Usage: ah <option>"
         echo ""
@@ -3609,6 +3356,7 @@ function ah() {
         fi
         return 1
     }
+
     function _nmap_shortcut(){
         if which nmap &>/dev/null; then
             function nmap-aliases(){
@@ -3641,6 +3389,89 @@ function ah() {
             }
         fi
     }
+    
+    function _proxy_Manager() {
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    proh                       Proxy hotshare"
+        echo "    prohc                      Proxy http-custom"
+        echo "    prohi                      Proxy http-injector"
+        echo "    pror                       Proxy reset"
+        echo "    pros                       Proxy socks"
+        echo "    prosc                      Proxy custom"
+        echo "    proxy                      Regular proxy command"
+        return 1
+    }
+
+    function _helper_Manager() {
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    ca                         Change Alias"
+        echo "    cfs | cloudfile            Local to internet"
+        echo "    colormap                   Show color"
+        echo "    cdocs                      Document onverter"
+        echo "    cimage                     Image converter"
+        echo "    cmedia                     Music and Video converter"
+        echo "    dbm                        Database manager guide"
+        echo "    dl | download              Download with simple command"
+        echo "    giit                       GIT Program make it simple"
+        echo "    mpdf                       Merge PDF file"
+        echo "    rz                         Restart zsh"
+        echo "    sctl                       Service of system"
+        echo "    kali                       Kali Nethunter manager"
+        echo "    subs                       Convert vtt to srt"
+        echo "    ts | troubleshoot          Fixing Manager"
+        if [[ $system == 'termux' ]]; then
+            echo "    troot                      Termux using proot"
+        fi
+        return 1
+    }
+
+    function _git_helper(){
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    gpull                      Git pull"
+        echo "    gp                         Git push command"
+        echo "    gpush                      Git add, commit and pull command"
+        echo ""
+    }
+
+    function _ip_Manager() {
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    cf | cloudflare            Cloudflare operation"
+        echo "    getip                      Get IP Address from Local or Online ISP"
+        echo "    myip                       Check my ip"
+        echo "    netch                      Change IP and DNS local"
+        echo "    sc                         Connect SSH with database"
+        if [[ $system != 'termux' ]]; then
+            echo "    redns                      Flush DNS"
+        fi
+        return 1
+    }
+
+    function _batch_command(){
+        echo "Usage: ah <option>"
+        echo ""
+        echo "Default command can used:"
+        echo "------------------------------------------------"
+        echo "    install-kubernetes-master  Install kubernetes master"
+        echo "    install-minikube           Install minikube"
+        echo "    install-kubectl            Install kubectl"
+        echo "    install-ansible            Install ansible"
+        echo "    install-docker             Install docker"
+        echo "    install-terraform          Install terraform"
+    }
+
+    # DevOps Helper
     for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
         if [[ $_sup_sys == $_my_system ]]; then
             function _ansible_shortcut(){
@@ -3835,83 +3666,7 @@ function ah() {
             break
         fi
     done
-    
 
-    function _proxy_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    proh                       Proxy hotshare"
-        echo "    prohc                      Proxy http-custom"
-        echo "    prohi                      Proxy http-injector"
-        echo "    pror                       Proxy reset"
-        echo "    pros                       Proxy socks"
-        echo "    prosc                      Proxy custom"
-        echo "    proxy                      Regular proxy command"
-        return 1
-    }
-    function _helper_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    ca                         Change Alias"
-        echo "    cfs | cloudfile            Local to internet"
-        echo "    colormap                   Show color"
-        echo "    cdocs                      Document onverter"
-        echo "    cimage                     Image converter"
-        echo "    cmedia                     Music and Video converter"
-        echo "    dbm                        Database manager guide"
-        echo "    dl | download              Download with simple command"
-        echo "    giit                       GIT Program make it simple"
-        echo "    mpdf                       Merge PDF file"
-        echo "    rz                         Restart zsh"
-        echo "    sctl                       Service of system"
-        echo "    kali                       Kali Nethunter manager"
-        echo "    ts | troubleshoot          Fixing Manager"
-        if [[ $system == 'termux' ]]; then
-            echo "    troot                      Termux using proot"
-        fi
-        return 1
-    }
-    function _git_helper(){
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    gpull                      Git pull"
-        echo "    gp                         Git push command"
-        echo "    gpush                      Git add, commit and pull command"
-        echo ""
-    }
-    function _ip_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    cf | cloudflare            Cloudflare operation"
-        echo "    getip                      Get IP Address from Local or Online ISP"
-        echo "    myip                       Check my ip"
-        echo "    netch                      Change IP and DNS local"
-        echo "    sc                         Connect SSH with database"
-        if [[ $system != 'termux' ]]; then
-            echo "    redns                      Flush DNS"
-        fi
-        return 1
-    }
-    function _batch_command(){
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    install-kubernetes-master  Install kubernetes master"
-        echo "    install-minikube           Install minikube"
-        echo "    install-kubectl            Install kubectl"
-        echo "    install-ansible            Install ansible"
-        echo "    install-docker             Install docker"
-        echo "    install-terraform          Install terraform"
-    }
     while getopts "agkdtiPpHh" opt; do
         case $opt in
         "a") _ansible_shortcut;break;;
