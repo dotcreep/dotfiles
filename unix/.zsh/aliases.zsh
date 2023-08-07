@@ -490,7 +490,6 @@ function getip(){
     if ping -c 1 "9.9.9.9" &>/dev/null; then
         if [[ $online == true ]]; then
             shift
-            echo "$*"
             if [[ $(date +%s) -le $_timeout ]]; then
                 echo "Too many request, please wait in $(( $_timeout - $(date +%s)))s"
                 return 1
