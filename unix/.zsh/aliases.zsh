@@ -1452,15 +1452,11 @@ function play(){
 
 function sysctl(){
   if $_thisTermux; then
-    if [[ ! $(command -v sv) ]]; then
-      _checkingPackage -i termux-services
-      _sysService="sv"
-    else
-      _sysService="sv"
-    fi
+    [[ ! $(command -v sv) ]] && _checkingPackage -i termux-services
+    _sysService="sv"
   elif $_thisWin && [[ $(command -v service) ]]; then
     _sysService="service"
-  else
+  elif $_thisLinux; then
     if [[ $(command -v systemctl) ]]; then
       _sysService="systemctl"
     elif [[ $(command -v service) ]]; then
