@@ -38,7 +38,7 @@ Shortcut | Function
 `auruu` | AUR Upgrade
 `aurr` | AUR Remove
 
-**Maybe can useful**
+**Other command**
 
 - Use `sysctl` for sysinit like systemd, service.
 - Use `ttmux` for termux assist command.
