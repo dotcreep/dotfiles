@@ -1474,16 +1474,16 @@ function sysctl(){
     echo ""
     echo "Options :"
     echo "------------------------------------------------"
-    echo "    -u      Start service"
-    echo "    -r      Restart service"
+    echo "    -D      Disable service"
     echo "    -d      Stop service"
     echo "    -E      Enable service"
-    echo "    -D      Disable service"
-    echo "    -s      Show status service"
     echo "    -h      Show this help message"
+    echo "    -r      Restart service"
+    echo "    -s      Show status service"
+    echo "    -u      Start service"
   }
 
-  while getopts ":d:e:s:r:S:t:ah" opt; do
+  while getopts ":u:d:D:E:s:r:h" opt; do
     case $opt in
       u ) local action="start" actionSV="up" service="$OPTARG"; break;;
       r ) local action="restart" actionSV="reload" service="$OPTARG"; break;;
