@@ -1456,7 +1456,7 @@ function sysctl(){
     _sysService="sv"
   elif $_thisWin && [[ $(command -v service) ]]; then
     _sysService="service"
-  elif $_thisLinux; then
+  else
     if [[ $(command -v systemctl) ]]; then
       _sysService="systemctl"
     elif [[ $(command -v service) ]]; then
@@ -1501,15 +1501,11 @@ function sysctl(){
 
   [[ -z $action || -z $actionSV ]] && _HandleError "Must specify one option" && return 1
   if $_thisTermux; then
-    for thisAction in "start" "restart" "stop" "status" "sv-enable" "sv-disable"; do
-      [[ $action == $thisAction ]] && $_sysService $thisAction $service || _HandleWarn "$_notSupport"
-      break
-    done
+    local thisAction='^(start|restart|stop|status|sv-enable|sv-disable)$'
+    [[ $action =~ $thisAction ]] && $_sysService $action $service || _HandleWarn "$_notSupport"
   elif $_thisWin; then
-    for thisAction in "start" "restart" "stop" "status" "enable" "disable"; do
-      [[ $action == $thisAction ]] && sudo $_sysService $service $thisAction || _HandleWarn "$_notSupport"
-      break
-    done
+    local thisAction='^(start|restart|stop|status|enable|disable)$'
+    [[ $action =~ $thisAction ]] && sudo $_sysService $service $action || _HandleWarn "$_notSupport"
   else
     local thisAction='^(start|restart|stop|status|enable|disable)$'
     local updown='^(up|down)$'
