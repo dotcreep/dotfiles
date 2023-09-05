@@ -22,9 +22,9 @@ function _checkSystem(){
   function notermux(){
     if [[ $_sysName == "alpine" ]]; then
       _packageManager="apk"
-    elif [[ $_sysName == ^(debian|ubuntu)$ ]]; then
+    elif [[ $_sysName == '^(debian|ubuntu)$' ]]; then
       _packageManager="apt-get"
-    elif [[ $_sysName == ^(arch|*gentoo*|*manjaro*)$ ]]; then
+    elif [[ $_sysName == '^(arch|*gentoo*|*manjaro*)$' ]]; then
       _packageManager="pacman"
     else
       for _checkPackage in pacman apk zypper xbps-install pkg yum dnf apt; do
