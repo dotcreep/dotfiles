@@ -1382,31 +1382,27 @@ function installBundles(){
       fi
     fi
   }
-  local __isArch=""
-  if [[ $_package_Manager == "pacman" ]]; then
-    function install_bundles_aur(){
-      __isArch="AUR"
-      if [[ ! $(command -v yay) ]]; then
-        [[ ! $(command -v git) ]] && _checkingPackage -i git
-        installnc base-devel
-        cd /opt
-        git clone https://aur.archlinux.org/yay.git
-        sudo chown -R $USER:$USER ./yay.git
-        cd yay.git && makepkg -si && cd $HOME
-      else
-        _HandleResult "Already installed"
-      fi
-    }
-  fi
+  function install_bundles_aur(){
+    if [[ ! $(command -v yay) ]]; then
+      [[ ! $(command -v git) ]] && _checkingPackage -i git
+      installnc base-devel
+      cd /opt
+      git clone https://aur.archlinux.org/yay.git
+      sudo chown -R $USER:$USER ./yay.git
+      cd yay.git && makepkg -si && cd $HOME
+    else
+      _HandleResult "Already installed"
+    fi
+  }
   PS3=$(_HandleCustom ${CYAN} "Install:" "")
-  select opt in "Snap" "$__isArch" "Docker" "Minikube" "Kubernetes Master" "Cloudflared" "Cancel"; do
+  select opt in "Snap" "AUR" "Docker" "Minikube" "Kubernetes Master" "Cloudflared" "Cancel"; do
     case $opt in
       "AUR" ) install_bundles_aur; break;;
       "Snap" ) install_bundles_snap; break;;
       "Docker" ) install_bundles_docker; break;;
       "Minikube" ) install_bundles_minikube; break;;
       "Kubernetes Master" ) install_bundles_kubernetes_adm; break;;
-      "Cloudflare" ) install_bundles_cloudflared; break;;
+      "Cloudflared" ) install_bundles_cloudflared; break;;
       "Cancel" ) break;;
       * ) _HandleWarn "Selected is invalid!"; continue;;
     esac
