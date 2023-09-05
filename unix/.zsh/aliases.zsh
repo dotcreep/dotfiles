@@ -8,6 +8,48 @@ RESET="\e[0m"
 _notSupport="Sorry, your system is not supported."
 _comingSoon="Under Maintenance"
 
+function _checkSystem(){
+  _thisTermux=false
+  _thisWin=false
+  _thisLinux=false
+  _sysName="Unknown"
+  _sysArch=$(uname -m)
+  local checkRelease=("/etc/os-release" "/etc/lsb-release" "/etc/redhat-release")
+  for sysRelease in "${checkRelease[@]}"; do
+    [[ -f "$sysRelease" ]] && _sysName=$(awk -F= '/^ID=/{print $2}' "$sysRelease") && break
+  done
+
+  function notermux(){
+    if [[ $_sysName == "alpine" ]]; then
+      _packageManager="apk"
+    elif [[ $_sysName == '^(debian|ubuntu)$' ]]; then
+      _packageManager="apt-get"
+    elif [[ $_sysName == '^(arch|*gentoo*|*manjaro*)$' ]]; then
+      _packageManager="pacman"
+    else
+      for _checkPackage in pacman apk zypper xbps-install pkg yum dnf apt; do
+        [[ $(command -v $_checkPackage) ]] && _packageManager=$(basename $_checkPackage) && break;
+      done
+    fi
+  }
+  if [[ -d "/data/data/com.termux/files/usr" ]]; then
+    _systemType="termux" && _thisTermux=true
+  elif [[ -n $(uname -mrs | grep -w Microsoft | sed "s/.*\-//" | awk "{print $1}") ]]; then
+    _systemType="windows" && _thisWin=true
+  else
+    _systemType="linux" && _thisLinux=true
+  fi
+
+  [[ $_systemType == "termux" ]] && _packageManager="pkg" || notermux
+
+  # Out
+  # _systemType
+  # _packageManager
+  # _sysName
+  # _sysArch
+}
+_checkSystem
+
 function ___COLORIZE___(){
   local colors=("31" "33" "32" "36" "35" "34")
   local text="$1"
@@ -67,71 +109,6 @@ function _checkingPackage(){
     _HandleResult "Success installing $name" && return 0 || \
     _HandleError "Failed installing $name" && return 1
 }
-
-function _checkSystem(){
-  _thisTermux=false
-  _thisWin=false
-  _thisLinux=false
-  _sysName="Unknown"
-  _sysArch=$(uname -m)
-  local checkRelease=("/etc/os-release" "/etc/lsb-release" "/etc/redhat-release")
-  for sysRelease in "${checkRelease[@]}"; do
-    [[ -f "$sysRelease" ]] && _sysName=$(awk -F= '/^ID=/{print $2}' "$sysRelease") && break
-  done
-
-  function notermux(){
-    if [[ $_sysName == "alpine" ]]; then
-      _packageManager="apk"
-    elif [[ $_sysName == '^(debian|ubuntu)$' ]]; then
-      _packageManager="apt-get"
-    elif [[ $_sysName == '^(arch|*gentoo*|*manjaro*)$' ]]; then
-      _packageManager="pacman"
-    else
-      for _checkPackage in pacman apk zypper xbps-install pkg yum dnf apt; do
-        [[ $(command -v $_checkPackage) ]] && _packageManager=$(basename $_checkPackage) && break;
-      done
-    fi
-  }
-  if [[ -d "/data/data/com.termux/files/usr" ]]; then
-    _systemType="termux" && _thisTermux=true
-  elif [[ -n $(uname -mrs | grep -w Microsoft | sed "s/.*\-//" | awk "{print $1}") ]]; then
-    _systemType="windows" && _thisWin=true
-  else
-    _systemType="linux" && _thisLinux=true
-  fi
-
-  [[ $_systemType == "termux" ]] && _packageManager="pkg" || notermux
-
-  if $_thisTermux; then
-    if [[ ! $(command -v sv) ]]; then
-      _checkingPackage -i termux-services
-      _sysService="sv"
-    else
-      _sysService="sv"
-    fi
-  elif $_thisWin && [[ $(command -v service) ]]; then
-    _sysService="service"
-  else
-    if [[ $(command -v systemctl) ]]; then
-      _sysService="systemctl"
-    elif [[ $(command -v service) ]]; then
-      _sysService="service"
-    elif [[ $(command -v sv) ]]; then
-      _sysService="sv"
-    else
-      _sysService=""
-      _HandleWarn "$_notSupport"
-    fi
-  fi
-
-  # Out
-  # _sysService
-  # _systemType
-  # _packageManager
-  # _sysName
-  # _sysArch
-}
-_checkSystem
 
 function install(){
   [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
@@ -920,7 +897,7 @@ function git_tools(){
     echo "    -w PATH   Working dir for git server"
     echo "    -h        Show this message"
   }
-  while getopts ":P:w:r:lpsh" opt; do
+  while getopts ":P:w:r:R:lpsh" opt; do
     case $opt in
       p ) git pull; break;;
       P ) git add . && git commit -m "$OPTARG" && git push; break;;
@@ -1474,6 +1451,27 @@ function play(){
 }
 
 function sysctl(){
+  if $_thisTermux; then
+    if [[ ! $(command -v sv) ]]; then
+      _checkingPackage -i termux-services
+      _sysService="sv"
+    else
+      _sysService="sv"
+    fi
+  elif $_thisWin && [[ $(command -v service) ]]; then
+    _sysService="service"
+  else
+    if [[ $(command -v systemctl) ]]; then
+      _sysService="systemctl"
+    elif [[ $(command -v service) ]]; then
+      _sysService="service"
+    elif [[ $(command -v sv) ]]; then
+      _sysService="sv"
+    else
+      _sysService=""
+      _HandleWarn "$_notSupport" && return 1
+    fi
+  fi
 
   function _sctl_usage(){
     echo "Usage: sysctl <options> service"
