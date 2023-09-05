@@ -8,6 +8,66 @@ RESET="\e[0m"
 _notSupport="Sorry, your system is not supported."
 _comingSoon="Under Maintenance"
 
+function ___COLORIZE___(){
+  local colors=("31" "33" "32" "36" "35" "34")
+  local text="$1"
+  local len=${#text}
+  for ((i = 0; i < len; i++)); do
+    local color_idx=$((i % ${#colors[@]}))
+    local color_code="\e[${colors[$color_idx]}m"
+    echo -ne "${color_code}${text:$i:1}"
+  done
+  echo -e "\e[0m"
+}
+
+function _HandleWarn(){
+  local warning="${YELLOW}Warning:${RESET} $1"
+  echo "$warning"
+}
+
+function _HandleStart(){
+  local started="${CYAN}Process:${RESET} $1"
+  echo "$started"
+}
+
+function _HandleError(){
+  local error_message="${RED}Error:${RESET} $1"
+  echo "$error_message"
+  return 1
+}
+
+function _HandleResult(){
+  local result_message="${GREEN}Result:${RESET} $1"
+  echo "$result_message"
+}
+
+function _HandleCustom(){
+  local message="$1$2${RESET} $3"
+  echo "$message"
+}
+
+function _checkingPackage(){
+  while getopts ":i:p:" opt; do
+    case $opt in
+      "i") local code=$OPTARG;;
+      "p") local name=$OPTARG;;
+      \? ) _HandleWarn "Invalid option" >&2; return 1; break;;
+    esac
+  done
+  [[ -z $code ]] && echo "Option install package ('-i') and optional package ('-p') is required" && return 0
+  [[ -z $name ]] && name=$code
+  [[ ! $(command -v $name 2>/dev/null) ]] && _HandleWarn "$name not installed. Installing now!"
+  if [[ ! $(search $name 2>/dev/null) ]]; then
+    _HandleError "$name is not found on the repository"
+    return 1
+  fi
+  _HandleStart "Installing $code"
+  local tryInstall=$(installnc $code &>/dev/null)
+  [[ $? -eq 0 && $(command -v $name) ]] && \
+    _HandleResult "Success installing $name" && return 0 || \
+    _HandleError "Failed installing $name" && return 1
+}
+
 function _checkSystem(){
   _thisTermux=false
   _thisWin=false
@@ -72,66 +132,6 @@ function _checkSystem(){
   # _sysArch
 }
 _checkSystem
-
-function ___COLORIZE___(){
-  local colors=("31" "33" "32" "36" "35" "34")
-  local text="$1"
-  local len=${#text}
-  for ((i = 0; i < len; i++)); do
-    local color_idx=$((i % ${#colors[@]}))
-    local color_code="\e[${colors[$color_idx]}m"
-    echo -ne "${color_code}${text:$i:1}"
-  done
-  echo -e "\e[0m"
-}
-
-function _HandleWarn(){
-  local warning="${YELLOW}Warning:${RESET} $1"
-  echo "$warning"
-}
-
-function _HandleStart(){
-  local started="${CYAN}Process:${RESET} $1"
-  echo "$started"
-}
-
-function _HandleError(){
-  local error_message="${RED}Error:${RESET} $1"
-  echo "$error_message"
-  return 1
-}
-
-function _HandleResult(){
-  local result_message="${GREEN}Result:${RESET} $1"
-  echo "$result_message"
-}
-
-function _HandleCustom(){
-  local message="$1$2${RESET} $3"
-  echo "$message"
-}
-
-function _checkingPackage(){
-  while getopts ":i:p:" opt; do
-    case $opt in
-      "i") local code=$OPTARG;;
-      "p") local name=$OPTARG;;
-      \? ) _HandleWarn "Invalid option" >&2; return 1; break;;
-    esac
-  done
-  [[ -z $code ]] && echo "Option install package ('-i') and optional package ('-p') is required" && return 0
-  [[ -z $name ]] && name=$code
-  [[ ! $(command -v $name 2>/dev/null) ]] && _HandleWarn "$name not installed. Installing now!"
-  if [[ ! $(search $name 2>/dev/null) ]]; then
-    _HandleError "$name is not found on the repository"
-    return 1
-  fi
-  _HandleStart "Installing $code"
-  local tryInstall=$(installnc $code &>/dev/null)
-  [[ $? -eq 0 && $(command -v $name) ]] && \
-    _HandleResult "Success installing $name" && return 0 || \
-    _HandleError "Failed installing $name" && return 1
-}
 
 function install(){
   [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
@@ -1534,7 +1534,7 @@ function sysctl(){
         _HandleWarn "$_notSupport" && return 1
       fi
     else
-      
+      _HandleWarn "$_notSupport" && return 1
     fi
   fi
 }
