@@ -1,72 +1,67 @@
 Hi, there! I'm here.. 👋
 
-This Repository **dotfiles** contains my personal linux and windows config files. My mission for **dotfiles** is configured for any linux distribution. Example, you can use this dotfiles in termux, ubuntu, arch, etc with same command. Forget package manager and some command, make it easy with one command on any distribution.
+These **dotfiles** contains my personal linux and windows configuration files. I'm just too lazy to rebuild new machine from scratch, and take it from arrggghh to yeah. The goal is to create a terminal ecosystem like Termux on Android, WSL1, WSL2, Ubuntu, Arch, and other (common) distro, making it easy with one command on any distribution.
 
-# Icon
-I'm using [Nerd-Fonts](https://www.nerdfonts.com/) for displaying icon in my terminal. Currently, I'm using the **Caskaydia Cove Nerd Font Complete Mono Windows Compatible Regular** in terminal application.
+# My Terminal Interface
+Personally, I'm using [Nerd-Fonts](https://www.nerdfonts.com/) for displaying icon on my terminal on [this screenshot](#screenshot). Currently using **Caskaydia Cove Nerd Font Complete Mono Windows Compatible Regular**
 
 # Install
-Need dependency `wget zsh git`
-
 ```
-git clone https://github.com/dotcreep/dotfiles.git && (cd dotfiles; bash install.sh)
+git clone https://github.com/dotcreep/dotfiles.git && (cd dotfiles && bash install.sh)
 ```
 
 # Shortcut Example
 
-**General**
+**Package Manager**
 
-Minimize Shortcut | Shortcut | What for?
+Minimize Shortcut | Shortcut | Function
 --- | --- | ---
 `i` | `install` | Install Package
+`inc` | `installnc` | Install Package without confirm
 `u` | `update` | Update Repository
 `uu` | `upgrade` | Upgrade Packages
-`uuu` | `update && upgrade` | Update Repo and Upgrade Package
+`uuu` | `updateupgrade` | Update Repo and Upgrade Package
 `r` | `remove` | Uninstall Package
+`ri` | `reinstall` | Reinstall package
 `d` | `detail` | Detail Package
 `o` | `orphan` | Remove Non-used Packages
-`cpkg` | `checkpkg` | Check Package
-`lpkg` | `listpkg` | List Package
-`hpkg` | `holdpkg` | Hold Package
+`cpkg` | `checkpackage` | Check Package
+`lpkg` | `listpackage` | List Package
+`hpkg` | `holdpackage` | Hold Package
 
 **Specially AUR**
 
-Shortcut | What for?
+Shortcut | Function
 --- | ---
-`auri` | `AUR Install`
-`auru` | `AUR Update`
-`auruu` | `AUR Upgrade`
-`aurr` | `AUR Remove`
+`auri` | AUR Install
+`auru` | AUR Update
+`auruu` | AUR Upgrade
+`aurr` | AUR Remove
 
-**Converter and Merge**
 
-Shortcut | What for?
---- | ---
-`mpdf` | Merge PDF
-`cimage` | Image Converter
-`cmedia` | Audio and Video Converter
-`cdocs` | Document Converter
+# Update aliases v2 (BETA)
+- Rebuild from scratch
+- More effective command
+- Use `aliasHelp -h example` for help command
+- Some command changed but package manager are still as same or some added
 
-And More you can see on script or use 'ah' for aliases help
-
-# Support System
+# Support Aliases
 
 System | Support
 --- | ---
-Alpine | ✔️
-Arch | ✔️
-Debian | ✔️
-Fedora | ✔️
+Linux | ✔️
 Mac | ❌
-Manjaro | ✔️
-OpenSUSE | ✔️
-RHEL | ✔️
-Termux | ✔️
-Ubuntu | ✔️
-VoidLinux | ✔️
-WSL | ✔️
+Windows (PowerShell) | ❌ (planned)
 
 # Other Resources
-- [dotFiles](https://github.com/dotcreep/dotfiles) - My personal configuration files for linux and windows.
-- [Cheat Sheet](https://github.com/dotcreep/cheat-sheet) - Command Reference for various tools, maybe included on dotfiles.
-- [Template](https://github.com/dotcreep/boilerplates) - Templates for any project.
+- [dotFiles](https://github.com/dotcreep/dotfiles) - My personal config for linux and windows
+- [Cheat Sheet](https://github.com/dotcreep/cheat-sheet) - Command Reference for various tools
+- [Template](https://github.com/dotcreep/boilerplates) - Templates for any project
+
+
+# Screenshot
+**Alpine on WSL 1**
+![Alpine on WSL1](./screenshots/alpine-on-wsl1.png)
+
+**Ubuntu on WSL 2**
+![Ubuntu on WSL2](./screenshots/ubuntu-on-wsl2.png)

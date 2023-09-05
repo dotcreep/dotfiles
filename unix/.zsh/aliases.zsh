@@ -1,2585 +1,976 @@
-############################# PACKAGE #############################
-not_support="[!] Sorry, your system is not supported."
-wrong_input="[!] Wrong input, try again!"
-if [[ -n $(uname -mrs | grep -w Microsoft | sed "s/.*\-//" | awk "{print $1}") ]]; then
-    system="windows"
-else
-    system="linux"
-fi
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+PURPLE="\e[35m"
+CYAN="\e[36m"
+RESET="\e[0m"
+_notSupport="Sorry, your system is not supported."
+_comingSoon="Under Maintenance"
 
-if [ -d "/data/data/com.termux/files/usr" ]; then
-    pm="pkg"
-    system="termux"
-else
-    pm="not included"
-    for package in pacman apk zypper xbps-install pkg yum dnf apt; do
-        if which $package >/dev/null; then
-            pm=$package
-            break
-        fi
-    done
-fi
+function _checkSystem(){
+  _thisTermux=false
+  _thisWin=false
+  _thisLinux=false
+  _sysName="Unknown"
+  _sysArch=$(uname -m)
+  local checkRelease=("/etc/os-release" "/etc/lsb-release" "/etc/redhat-release")
+  for sysRelease in "${checkRelease[@]}"; do
+    [[ -f "$sysRelease" ]] && _sysName=$(awk -F= '/^ID=/{print $2}' "$sysRelease") && break
+  done
 
-if [[ -f /etc/os-release ]]; then
-    _my_system=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
-elif [[ -f /etc/lsb-release ]]; then
-    _my_system=$(awk -F= '/^ID=/{print $2}' /etc/lsb-release)
-elif [[ -f /etc/redhat-release ]]; then
-    _my_system=$(awk -F= '/^ID=/{print $2}' /etc/redhat-release)
-fi
-
-function install() {
-    if [[ $system == "termux" ]]; then
-        $pm install $*
+  function notermux(){
+    if [[ $_sysName == "alpine" ]]; then
+      _packageManager="apk"
+    elif [[ $_sysName == ^(debian|ubuntu)$ ]]; then
+      _packageManager="apt-get"
+    elif [[ $_sysName == ^(arch|*gentoo*|*manjaro*)$ ]]; then
+      _packageManager="pacman"
     else
-        if [[ $pm == "apt" || $pm == "dnf" || $pm == "yum" || $pm == "pkg" || $pm == "zypper" ]]; then
-            sudo $pm install $*
-        elif [[ $pm == "pacman" || $pm == "xbps-install" ]]; then
-            sudo $pm -S $*
-        elif [[ $pm == "apk" ]]; then
-            sudo $pm add $*
-        else
-            echo $not_support
-            return 1
-        fi
+      for _checkPackage in pacman apk zypper xbps-install pkg yum dnf apt; do
+        [[ $(command -v $_checkPackage) ]] && _packageManager=$(basename $_checkPackage) && break;
+      done
     fi
-}
+  }
+  if [[ -d "/data/data/com.termux/files/usr" ]]; then
+    _systemType="termux" && _thisTermux=true
+  elif [[ -n $(uname -mrs | grep -w Microsoft | sed "s/.*\-//" | awk "{print $1}") ]]; then
+    _systemType="windows" && _thisWin=true
+  else
+    _systemType="linux" && _thisLinux=true
+  fi
 
-function inocon() {
-    if [[ $system == "termux" ]]; then
-        $pm install $* -y
+  [[ $_systemType == "termux" ]] && _packageManager="pkg" || notermux
+
+  if $_thisTermux; then
+    if [[ ! $(command -v sv) ]]; then
+      _checkingPackage -i termux-services
+      _sysService="sv"
     else
-        if [[ $pm == "apt" || $pm == "dnf" || $pm == "yum" || $pm == "pkg" || $pm == "zypper" ]]; then
-            sudo $pm install -y $* 
-        elif [[ $pm == "pacman" ]]; then
-            sudo $pm -S --noconfirm $*
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo xbps-install -Sy $*
-        elif [[ $pm == "apk" ]]; then
-            sudo $pm add --no-cache --quiet $*
-        else
-            echo $not_support
-            return 1
-        fi
+      _sysService="sv"
     fi
-}
-
-function update() {
-    if [[ $system == "termux" ]]; then
-        $pm update
+  elif $_thisWin && [[ $(command -v service) ]]; then
+    _sysService="service"
+  else
+    if [[ $(command -v systemctl) ]]; then
+      _sysService="systemctl"
+    elif [[ $(command -v service) ]]; then
+      _sysService="service"
+    elif [[ $(command -v sv) ]]; then
+      _sysService="sv"
     else
-        if [[ $pm == "apt" || $pm == "apk" || $pm == "pkg" ]]; then
-            sudo $pm update
-        elif [[ $pm == "pacman" ]]; then
-            sudo $pm -Sy
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo $pm -S
-        elif [[ $pm == "zypper" ]]; then
-            sudo $pm refresh
-        elif [[ $pm == "dnf" || $pm == "yum" ]]; then
-            sudo $pm check-update
-        else
-            echo $not_support
-            return 1
-        fi
+      _sysService=""
+      _HandleWarn "$_notSupport"
     fi
+  fi
+
+  # Out
+  # _sysService
+  # _systemType
+  # _packageManager
+  # _sysName
+  # _sysArch
+}
+_checkSystem
+
+function ___COLORIZE___(){
+  local colors=("31" "33" "32" "36" "35" "34")
+  local text="$1"
+  local len=${#text}
+  for ((i = 0; i < len; i++)); do
+    local color_idx=$((i % ${#colors[@]}))
+    local color_code="\e[${colors[$color_idx]}m"
+    echo -ne "${color_code}${text:$i:1}"
+  done
+  echo -e "\e[0m"
 }
 
-function upgrade() {
-    if [[ $system == "termux" ]]; then
-        $pm upgrade
-    else
-        if [[ $pm == "pacman" ]]; then
-            sudo $pm -Syu
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo $pm -Su
-        elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
-            sudo $pm update
-        elif [[ $pm == "apt" || $pm == "pkg" || $pm == "apk" ]]; then
-            sudo $pm upgrade
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
+function _HandleWarn(){
+  local warning="${YELLOW}Warning:${RESET} $1"
+  echo "$warning"
 }
 
-function remove() {
-    if [[ $system == "termux" ]]; then
-        $pm uninstall $*
-    else
-        if [[ $pm == "pkg" ]]; then
-            sudo $pm remove $*
-        elif [[ $pm == "apt" || $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
-            sudo $pm remove $*
-        elif [[ $pm == "pacman" ]]; then
-            sudo $pm -R $*
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo xbps-remove -R $*
-        elif [[ $pm == "apk" ]]; then
-            sudo $pm del $*
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
+function _HandleStart(){
+  local started="${CYAN}Process:${RESET} $1"
+  echo "$started"
 }
 
-function search() {
-    if [[ $system == "termux" ]]; then
-        $pm search $*
-    else
-        if [[ $pm == "apt" || $pm == "zypper" || $pm == "apk" || $pm == "pkg" || $pm == "dnf" || $pm == "yum" ]]; then
-            $pm search $*
-        elif [[ $pm == "xbps-install" ]]; then
-            xbps-query -Rs $*
-        elif [[ $pm == "pacman" ]]; then
-            $pm -Ss $*
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
+function _HandleError(){
+  local error_message="${RED}Error:${RESET} $1"
+  echo "$error_message"
+  return 1
 }
 
-function orphan() {
-    if [[ $system == "termux" ]]; then
-        $pm autoremove && $pm autoclean
-    else
-        if [[ $pm == "apt" || $pm == "apk" || $pm == "pkg" || $pm == "dnf" || $pm == "yum" ]]; then
-            sudo $pm autoremove
-        elif [[ $pm == "pacman" ]]; then
-            sudo $pm -Rns $(pacman -Qtdq)
-        elif [[ $pm == "zypper" ]]; then
-            sudo $pm remove $(rpm -qa --qf "%{NAME}\n" | grep -vx "$(rpm -qa --qf "%{INSTALLTIME}:%{NAME}\n" | sort -n | uniq -f1 | cut -d: -f2-)")
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo xbps-remove -O
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
+function _HandleResult(){
+  local result_message="${GREEN}Result:${RESET} $1"
+  echo "$result_message"
 }
 
-function reinstall() {
-    if [[ $system == "termux" ]]; then
-        $pm reinstall $*
-    else
-        if [[ $pm == "pacman" ]]; then
-            sudo $pm -S --needed $*
-        elif [[ $pm == "zypper" ]]; then
-            sudo $pm in -f $*
-        elif [[ $pm == "apk" ]]; then
-            sudo $pm add --force --no-cache $*
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo $pm -f $*
-        elif [[ $pm == "yum" || $pm == "dnf" ]]; then
-            sudo $pm reinstall $*
-        elif [[ $pm == "pkg" ]]; then
-            sudo $pm install -f $*
-        elif [[ $pm == "apt" ]]; then
-            sudo apt reinstall $*
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
+function _HandleCustom(){
+  local message="$1$2${RESET} $3"
+  echo "$message"
 }
 
-function updateandupgrade() {
-    if [[ $system == "termux" ]]; then
-        $pm update && $pm upgrade -y
-    else
-        if [[ $pm == "apt" ]]; then
-            sudo $pm update && sudo $pm upgrade -y
-        elif [[ $pm == "apk" ]]; then
-            sudo $pm update && sudo $pm upgrade
-        elif [[ $pm == "pacman" ]]; then
-            sudo $pm -Syu
-        elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
-            sudo $pm update
-        elif [[ $pm == "xbps-install" ]]; then
-            sudo $pm -Su
-        elif [[ $pm == "pkg" ]]; then
-            sudo freebsd-update install
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
-}
-
-function detail() {
-    if [[ $system == "termux" ]]; then
-        $pm show $*
-    else
-        if [[ $pm == "apt" ]]; then
-            $pm show $*
-        elif [[ $pm == "pacman" ]]; then
-            $pm -Si $*
-        elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" || $pm == "pkg" ]]; then
-            $pm info $*
-        elif [[ $pm == "apk" ]]; then
-            $pm info -a $*
-        elif [[ $pm == "xbps-install" ]]; then
-            xbps-query -R $*
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
-}
-
-function checkpkg() {
-    if [[ $system == "termux" ]]; then
-        echo $not_support
-        return 1
-    else
-        if [[ $pm == "apt" ]]; then
-            dpkg -C
-        elif [[ $pm == "pacman" ]]; then
-            $pm -Qkk
-        elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
-            rpm -Va
-        elif [[ $pm == "apk" || $pm == "pkg" ]]; then
-            $pm check
-        elif [[ $pm == "xbps-install" ]]; then
-            xbps-query -H check
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
-}
-
-function listpkg() {
-    if [[ $system == "termux" ]]; then
-        $pm list-installed
-    else
-        if [[ $pm == "apt" ]]; then
-            dpkg --list
-        elif [[ $pm == "pacman" ]]; then
-            $pm -Q
-        elif [[ $pm == "zypper" || $pm == "dnf" || $pm == "yum" ]]; then
-            rpm -qa
-        elif [[ $pm == "apk" ]]; then
-            $pm list
-        elif [[ $pm == "xbps-install" ]]; then
-            xbps-query -l
-        elif [[ $pm == "pkg" ]]; then
-            $pm info
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
-}
-
-function holdpkg() {
-    if [[ $system == "termux" ]]; then
-        echo $not_support
-        return 1
-    else
-        if [[ $pm == "apt" ]]; then
-            sudo apt-mark hold $*
-        elif [[ $pm == "pacman" ]]; then
-            sudo $pm -D $*
-        elif [[ $pm == "zypper" ]]; then
-            sudo $pm addlock $*
-        elif [[ $pm == "apk" ]]; then
-            sudo $pm add --lock $*
-        elif [[ $pm == "pkg" ]]; then
-            sudo $pm lock $*
-        else
-            echo $not_support
-            return 1
-        fi
-    fi
-}
-
-function install-aur(){
-    if [[ $pm != "pacman" ]]; then
-        echo "$not_support"
-        return 1
-    fi
-    if ! which yay &>/dev/null; then
-        echo "yay not installed. Installing now..."
-        install --needed base-devel git
-        cd $HOME
-        git clone https://aur.archlinux.org/yay.git
-        cd yay
-        makepkg -si
-    else
-        echo "Already installed"
-    fi
-}
-
-function auri(){
-    if ! which yay &>/dev/null; then
-        install-aur
-    fi
-    yay -S $*
-}
-
-function auru(){
-    if ! which yay &>/dev/null; then
-        install-aur
-    fi
-    yay -Sy $*
-}
-
-function auruu(){
-    if ! which yay &>/dev/null; then
-        install-aur
-    fi
-    yay -Syu $*
-}
-
-function aurs(){
-    if ! which yay &>/dev/null; then
-        install-aur
-    fi
-    yay -Ss $*
-}
-
-function aurr(){
-    if ! which yay &>/dev/null; then
-        install-aur
-    fi
-    yay -Runscd $*
-}
-
-function install-snap(){
-    if [[ $system == "termux" ]]; then
-        echo "$not_support"
-        return 1
-    fi
-    if ! which sudo &>/dev/null; then
-        install sudo
-        if which usermod &>/dev/null; then
-            usermod -G wheel $USER
-        fi
-    fi
-    if ! which snap &>/dev/null; then
-        _snappy_installing="snap not installed. Installing now..."
-        if [[ $_my_system == "ubuntu" || $_my_system == "debian" ]]; then
-            echo $_snappy_installing
-            update && install snapd -y
-        elif [[ $_my_system == "fedora" ]]; then
-            echo $_snappy_installing
-            install snapd
-        elif [[ $_my_system == "centos" || $_my_system == "redhat" || $_my_system == "rhel" ]]; then
-            echo $_snappy_installing
-            install epel-release && install snapd
-        elif [[ $_my_system == "opensuse" ]]; then
-            echo $_snappy_installing
-            sudo zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Leap_15.0 snappy
-            sudo zypper --gpg-auto-import-keys refresh
-            sudo zypper dup --from snappy
-            sudo zypper install snapd
-        elif [[ $_my_system == "manjaro" ]]; then
-            echo $_snappy_installing
-            install snapd
-        elif [[ $_my_system == "arch" ]]; then
-            echo $_snappy_installing
-            cd $HOME
-            git clone https://aur.archlinux.org/snapd.git
-            cd snapd
-            makepkg -si
-        else
-            echo "Your system not listed, will be updated"
-            return 1
-        fi
-    fi
-}
-
-function snapi(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    sudo snap install $*
-}
-
-function snapu(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    sudo snap refresh $*
-}
-
-function snapv(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    sudo snap revert $*
-}
-
-function snaps(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    snap find $*
-}
-
-function snapl(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    snap list $*
-}
-
-function snapla(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    snap list --all $*
-}
-
-function snapon(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    sudo snap enable $*
-}
-
-function snapoff(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    sudo snap disable $*
-}
-
-function snapr(){
-    if ! which snap &>/dev/null; then
-        install-snap
-    fi
-    sudo snap remove $*
-}
-
-########################### END PACKAGE ###########################
-
- ############################ NETTOOL #############################
-function getip(){
-    if ! which curl &>/dev/null; then
-        install curl &>/dev/null
-    fi
-    function _getIP_HELP_(){
-        echo "Usage : getip [options] <domain>";
-        echo "------------------------------------------------"
-        echo "    -h        Show this message"
-        echo "    -e        Use eksternal / online server"
-        echo "    -i        Use internal / local machine"
-
-    }
-    local online=false
-    local lokal=false
-    while getopts "eih" opt; do
-        case $opt in
-        "e") online=true;break;;
-        "i") lokal=true;break;;
-        "h" | *) _getIP_HELP_;return 1;break;;
-        \? | :) echo "Invalid option" >&2; usage; exit 1; ;;
-        esac
-    done
-
-    if [[ -z $1 ]]; then
-        _getIP_HELP_
-        return 1
-    fi
-
-    if ping -c 1 "9.9.9.9" &>/dev/null; then
-        if [[ $online == true ]]; then
-            shift
-            if [[ $(date +%s) -le $_timeout ]]; then
-                echo "Too many request, please wait in $(( $_timeout - $(date +%s)))s"
-                return 1
-            else
-                for i in "$@"; do
-                    local header="User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
-                    local ref="https://www.duckduckgo.com"
-                    local result=$(curl -s -i -H "$header" -e "$ref" https://www.courier.com/api/tools/domain-ip-lookup/\?domain=${i})
-                    local _status_code=$(echo "$result" | grep -oP "HTTP/2 \K[0-9]+")
-                    local _body=$(echo "$result" | grep -oP '\d+\.\d+\.\d+\.\d+' | uniq | tr '\n' ',' | sed 's/,$//')
-                    if [[ $_status_code -eq 200 ]]; then
-                        if [[ -z $result ]]; then
-                            echo " - $i : Error Access"
-                        else
-                            echo " - $i : $_body"
-                        fi
-                    elif [[ $_status_code -eq 429 ]]; then
-                        _timeout=$(($(date +%s) + 60))
-                        echo "Too many request, please wait in $(( $_timeout - $(date +%s)))s"
-                        break
-                    fi
-                done
-            fi
-        elif [[ $lokal == true ]]; then
-            if ! which dig &>/dev/null; then
-                echo "Tools not installed. Installing now..."
-                inocon dnsutils &>/dev/null
-                if which dig &>/dev/null; then
-                    echo "Success installing tools.."
-                else
-                    echo "Failed installing"
-                fi
-            fi
-            shift
-            local __ARRAY__=()
-            for i in "$@"; do
-                local result=$(dig $i | grep -A 100 "ANSWER SECTION:" | grep $i | grep -oP '\d+\.\d+\.\d+\.\d+' | uniq | tr '\n' ',' | sed 's/,$//')
-                if [[ -z $result ]]; then
-                    echo " - $i : Error Access or Blocked by Internal"
-                    __ARRAY__+=($i)
-                else
-                    echo " - $i : $result"
-                fi
-            done
-            if [[ -n ${__ARRAY__[@]} ]]; then
-                echo ""
-                echo -ne "Do you want check online the 'error domain' list? [y/N] "
-                read checklist_url
-                case $checklist_url in
-                    y | Y ) getip -e ${__ARRAY__[@]};;
-                    * ) break;;
-                esac
-            fi
-        else
-            for i in "$@"; do
-                local result=$(ping -c 1 "$i" 2>/dev/null | grep -oP '\d+\.\d+\.\d+\.\d+' | uniq)
-                if [[ -z $result ]]; then
-                    echo " - $i : Error Access"
-                elif [[ $result == "127.0.0.1" || $result == "0.0.0.0" ]]; then
-                    echo " - $i : Blocked"
-                else
-                    echo " - $i : $result"
-                fi
-            done
-        fi
-    else
-        echo "Check internet connection.."
-        return 1
-    fi
-}
-
-function myip() {
-    if ! which ip &>/dev/null; then
-        install ip-utils -y &>/dev/null
-    fi
-    if ! which curl &>/dev/null; then
-        install curl -y &>/dev/null
-    fi
-    gateways=$(ip route list match 0 table all scope global 2>/dev/null | awk '$4 ~ /\./ { gateways = gateways $4 ", " } END { print substr(gateways, 1, length(gateways)-2) }')
-    public_ip=$(curl -s ifconfig.me)
-    # ALL Local IP
-    if [[ $system == 'termux' ]]; then
-        if ! $pm list-installed &>/dev/null | grep -w iproute2 &>/dev/null; then
-            echo "cloudflared is not installed. Installing now..."
-            inocon iproute2 &>/dev/null
-        fi
-        gateway=$(ip route list match 0 table all scope global 2>/dev/null | awk '$3 ~ /\./ {print $5" "$3}')
-    else
-        gateway=$(ip route list match 0 table all scope global 2>/dev/null | awk '$4 ~ /\./ {print $6" "$4}')
-    fi
-    wifi_interface=$(echo $gateway | grep -n -E '\b(wlo|wlan|wifi|wlp0s|wlp1s|wlp2s|wlp3s|wlp4s|ath)[0-9]+\b')
-    lan_interface=$(echo $gateway | grep -n -E '\b(eth|enp|enp0s|enp1s|enp2s|enp3s|enp4s|eno|ens)[0-9]+\b')
-    if [[ -n $(echo $wifi_interface | awk -F: '{print $1}') ]]; then
-        int=$(echo $gateway | awk -v i=$(echo $wifi_interface | awk -F: '{print $1}') 'NR==i{print $1}')
-        if [[ $system == 'termux' ]]; then
-            ip_wifi=$(ip address show wlan0 | awk '/inet / {print $2}' | cut -f1 -d'/')
-            mac_wifi=$(ip address show wlan0 | awk '/link\/ether / {print $2}' | cut -f1 -d'/')
-        else
-            ip_wifi=$(ip addr show $(echo $int | awk '{print $1}') 2>/dev/null | awk '/inet / {print $2}' | cut -f1 -d'/')
-            mac_wifi=$(cat /sys/class/net/"$int"/address 2>/dev/null | awk '{print $1}')
-        fi
-        gateway_wifi=$(echo $wifi_interface | awk '{print $2}')
-    else
-        ip_wifi="Disconnect"
-        gateway_wifi="Disconnect"
-        mac_wifi="Disconnect"
-    fi
-    if [[ -n $(echo $lan_interface | awk -F: '{print $1}') ]]; then
-        int=$(echo $gateway | awk -v i=$(echo $lan_interface | awk -F: '{print $1}') 'NR==i{print $1}')
-        ip_lan=$(ip address show $(echo $int | awk '{print $1}') 2>/dev/null | awk '/inet / {print $2}' | cut -f1 -d'/')
-        gateway_lan=$(echo $lan_interface | awk '{print $2}')
-        mac_lan=$(cat /sys/class/net/"$int"/address 2>/dev/null | awk '{print $1}')
-    else
-        ip_lan="Disconnect"
-        gateway_lan="Disconnect"
-        mac_lan="Disconnect"
-
-    fi
-
-    echo "=================================="
-    echo "|            IP Info             |"
-    echo "=================================="
-    echo " IP Public    : $public_ip"
-    echo " Gateway WIFI : $gateway_wifi"
-    echo " IP WIFI      : $ip_wifi"
-    echo " MAC WIFI     : $mac_wifi"
-    if [[ $system != 'termux' ]]; then
-        echo " Gateway LAN  : $gateway_lan"
-        echo " IP LAN       : $ip_lan"
-        echo " MAC LAN      : $mac_lan"
-    fi
-    echo "=================================="
-}
-
-function netch() {
-    if [[ $system != 'windows' ]]; then
-        echo $not_support
-        return 1
-    fi
-    gateway=$(ip route list match 0 table all scope global 2>/dev/null | awk '$4 ~ /\./ {print $6" "$4}')
-    wifi_interface=$(echo $gateway | grep -n -E '\b(wlo|wlan|wifi|wlp0s|wlp1s|wlp2s|wlp3s|wlp4s|ath)[0-9]+\b')
-    lan_interface=$(echo $gateway | grep -n -E '\b(eth|enp|enp0s|enp1s|enp2s|enp3s|enp4s|eno|ens)[0-9]+\b')
-    interfaces=$(echo $gateway | awk '{ gateways = gateways $1 " " } END { print substr(gateways, 0, length(gateways)0) }')
-    wifi=$(echo $gateway | grep -E '\b(wlo|wlan|wifi|wlp0s|wlp1s|wlp2s|wlp3s|wlp4s|ath)[0-9]+\b' | awk '{ print $1 }')
-    gw_wifi=$(echo $gateway | grep -E '\b(wlo|wlan|wifi|wlp0s|wlp1s|wlp2s|wlp3s|wlp4s|ath)[0-9]+\b' | awk '{ print $2 }')
-    lan=$(echo $gateway | grep -E '\b(eth|enp|enp0s|enp1s|enp2s|enp3s|enp4s|eno|ens)[0-9]+\b' | awk '{ print $1 }')
-    gw_lan=$(echo $gateway | grep -E '\b(eth|enp|enp0s|enp1s|enp2s|enp3s|enp4s|eno|ens)[0-9]+\b' | awk '{ print $2 }')
-    if [[ ! $wifi_interface && $lan_interface ]]; then
-        echo "You can modify only LAN Network Interface"
-    elif [[ $wifi_interface && ! $lan_interface ]]; then
-        echo "You can modify only WIFI Network Interface"
-    elif [[ $wifi_interface && $lan_interface ]]; then
-        echo "You can modify LAN and WIFI Network Interface"
-    else
-        echo "You can not modify LAN and WIFI Network Interface, because your network is disconnected"
-        return 1
-    fi
-    generate_ip=$(powershell.exe /c ipconfig)
-    if [[ -z $(echo "$generate_ip" | grep -A2 'Ethernet adapter Ethernet:' | grep -e 'disconnected') ]]; then
-        windows_ethernet="Ethernet"
-    fi
-    if [[ -z $(echo "$generate_ip" | grep -A2 'Wireless LAN adapter WiFi:' | grep -e 'disconnected') ]]; then
-        windows_wireless="WiFi"
-    fi
-    if [[ -z $windows_wireless ]]; then wire=""; else wire="Wireless"; fi
-    if [[ -z $windows_ethernet ]]; then ether=""; else ether="Ethernet"; fi
-    PS3="What do you want to change? "
-    select netoption in IP DNS; do
-        case $netoption in
-        IP)
-            nextOption="ip"
-            break
-            ;;
-        DNS)
-            nextOption="dns"
-            break
-            ;;
-        *)
-            echo $wrong_input
-            return 1
-            ;;
-        esac
-    done
-    if [[ $nextOption == "ip" ]]; then
-        PS3="Select type IP: "
-        select opt in Static DHCP; do
-            case $opt in
-            Static)
-                type_ip='static'
-                break
-                ;;
-            DHCP)
-                type_ip='dhcp'
-                break
-                ;;
-            *)
-                echo $wrong_input
-                return 1
-                ;;
-            esac
-        done
-        if [[ $type_ip == 'static' ]]; then
-            PS3="Select interface: "
-            select opt in $wire $ether; do
-                case $opt in
-                Wireless)
-                    interface_selected=$windows_wireless
-                    break
-                    ;;
-                Ethernet)
-                    interface_selected=$windows_ethernet
-                    break
-                    ;;
-                *)
-                    echo $wrong_input
-                    return 1
-                    ;;
-                esac
-            done
-            echo -ne "Change IP for interface $interface_selected to : "
-            read ip_address
-            if [[ -z $ip_address ]]; then
-                if [[ $interface_selected == 'WiFi' ]]; then
-                    ip_address=$(ip address show $wifi | awk '/inet / {print $2}' | cut -f1 -d'/')
-                fi
-                if [[ $interface_selected == 'Ethernet' ]]; then
-                    ip_address=$(ip address show $lan | awk '/inet / {print $2}' | cut -f1 -d'/')
-                fi
-                echo "IP Address not replace"
-            fi
-            if [[ ! $ip_address =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
-                echo "IP Address is not valid. Try again!"
-                return 1
-            fi
-            echo -ne "Change netmask to : "
-            read netmask
-            if [ -z $netmask ]; then
-                netmask='255.255.255.0'
-                echo "Subnetmask using default $netmask"
-            fi
-            if [[ ! $netmask =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
-                echo "Netmask is not valid. Try again!"
-                return 1
-            fi
-            echo -ne "Change gateway to : "
-            read chg_gateway
-            if [[ -z $chg_gateway ]]; then
-                if [[ $interface_selected == 'WiFi' ]]; then
-                    chg_gateway=$gw_wifi
-                fi
-                if [[ $interface_selected == 'Ethernet' ]]; then
-                    chg_gateway=$gw_lan
-                fi
-                echo "Gateway not replace"
-            fi
-            if [[ ! $chg_gateway =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
-                echo "Gateway is not valid. Try again!"
-                return 1
-            fi
-            echo "Setting up interface $interface_selected to IP '$ip_address', netmask '$netmask', and gateway '$chg_gateway'"
-            powershell.exe /c "Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set address name=$interface_selected static $ip_address $netmask $chg_gateway'"
-        elif [[ $type_ip == 'dhcp' ]]; then
-            PS3="Select interface: "
-            select opt in $wire $ether; do
-                case $opt in
-                Wireless)
-                    interface_selected=$windows_wireless
-                    break
-                    ;;
-                Ethernet)
-                    interface_selected=$windows_ethernet
-                    break
-                    ;;
-                *)
-                    echo $wrong_input
-                    return 1
-                    ;;
-                esac
-            done
-            echo "Setting up IP interface $interface_selected to DHCP.."
-            powershell.exe /c "Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set address name=$interface_selected dhcp'"
-        fi
-    elif [[ $nextOption == "dns" ]]; then
-        PS3="Select type DNS: "
-        select opt in Static DHCP; do
-            case $opt in
-            Static)
-                type_dns='static'
-                break
-                ;;
-            DHCP)
-                type_dns='dhcp'
-                break
-                ;;
-            *)
-                echo $wrong_input
-                return 1
-                ;;
-            esac
-        done
-        if [[ $type_dns == 'static' ]]; then
-            PS3="Select interface: "
-            select opt in $wire $ether; do
-                case $opt in
-                Wireless)
-                    interface_selected=$windows_wireless
-                    break
-                    ;;
-                Ethernet)
-                    interface_selected=$windows_ethernet
-                    break
-                    ;;
-                *)
-                    echo $wrong_input
-                    return 1
-                    ;;
-                esac
-            done
-            PS3="Change DNS to : "
-            select dns in Local Google Cloudflare OpenDNS Adguard Quad9; do
-                case $dns in
-                Local)
-                    dnsname="Local DNS"
-                    dnsone="127.0.0.1"
-                    dnstwo="127.0.1.1"
-                    break
-                    ;;
-                Google)
-                    dnsname="Google DNS"
-                    dnsone="8.8.8.8"
-                    dnstwo="8.8.4.4"
-                    break
-                    ;;
-                Cloudflare)
-                    dnsname="Cloudflare DNS"
-                    dnsone="1.1.1.1"
-                    dnstwo="1.0.0.1"
-                    break
-                    ;;
-                OpenDNS)
-                    dnsname="OpenDNS"
-                    dnsone="208.67.222.222"
-                    dnstwo="208.67.220.;break220"
-                    break
-                    ;;
-                AdGuard)
-                    dnsname="Adguard DNS"
-                    dnsone="94.140.14.14"
-                    dnstwo="94.140.15.15"
-                    break
-                    ;;
-                Quad9)
-                    dnsname="Quad9 DNS"
-                    dnsone="9.9.9.9"
-                    dnstwo="149.112.112.112"
-                    break
-                    ;;
-                *)
-                    echo "Input Wrong.."
-                    break
-                    ;;
-                esac
-            done
-            echo "Setting up $dnsname"
-            powershell.exe /c "Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set dns name=$interface_selected static $dnsone;netsh interface ipv4 add dns name=$interface_selected $dnstwo index=2'"
-        elif [[ $type_dns == 'dhcp' ]]; then
-            PS3="Select interface: "
-            select opt in $wire $ether; do
-                case $opt in
-                Wireless)
-                    interface_selected=$windows_wireless
-                    break
-                    ;;
-                Ethernet)
-                    interface_selected=$windows_ethernet
-                    break
-                    ;;
-                *)
-                    echo $wrong_input
-                    return 1
-                    ;;
-                esac
-            done
-            echo "Setting up DNS to nonactive.."
-            powershell.exe /c "Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set dns name=$interface_selected dhcp'"
-        fi
-    fi
-}
-
-function proxy() {
-    if [[ $system != 'windows' ]]; then
-        echo $not_support
-        return 1
-    fi
-    case $1 in
-    -sc | socks-custom)
-        echo -ne "Port : "
-        read proxyport
-        powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyServer' -type 'String' -value 'socks=127.0.0.1:$proxyport'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyOverride' -type 'String' -value 'localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '1'}"
-        echo "Success set custom proxy.."
-        ;;
-    -hs | hotshare)
-        echo -ne "Proxy : "
-        read proxyip
-        echo -ne "Port : "
-        read proxyport
-        powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyServer' -type 'String' -value '$proxyip:$proxyport'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyOverride' -type 'String' -value 'localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '1'}"
-        echo "Success set hotshare proxy.."
-        ;;
-    -hi | http-injector)
-        PS3="Select proxy source: "
-        select data in $(ip route list match 0 table all scope global 2>/dev/null | awk '{print $4}'); do
-            case $data in
-            $data)
-                powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyServer' -type 'String' -value '$data:44355'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyOverride' -type 'String' -value 'localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '1'}"
-                echo "Success set hotshare proxy.."
-                break
-                ;;
-            esac
-        done
-        ;;
-    -hc | http-custom)
-        PS3="Select proxy source: "
-        select data in $(ip route list match 0 table all scope global 2>/dev/null | awk '{print $4}'); do
-            case $data in
-            $data)
-                powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyServer' -type 'String' -value '$data:7071'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyOverride' -type 'String' -value 'localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '1'}"
-                echo "Success set hotshare proxy.."
-                break
-                ;;
-            esac
-        done
-        ;;
-    -r | reset)
-        powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyServer' -type 'String' -value ''; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyOverride' -type 'String' -value ''; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '0'}"
-        echo "Success Reset Proxy.."
-        ;;
-    -s | socks)
-        powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyServer' -type 'String' -value 'socks=127.0.0.1:1080'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyOverride' -type 'String' -value 'localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'; Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '1'}"
-        echo "Success set socks5 proxy.."
-        ;;
-    -e | enable) powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '1'}" ;;
-    -d | disable) powershell.exe /c "& {Set-ItemProperty -path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -name 'ProxyEnable' -type 'DWord' -value '0'}" ;;
-    *)
-        echo "Usage : proxy [options]"
-        echo ""
-        echo "Options :"
-        echo "------------------------------------------------"
-        echo "    -d      Disable proxy"
-        echo "    -e      Enable current proxy"
-        echo "    -hi     Enable Hotshare HTTP Injector proxy"
-        echo "    -hs     Enable Hotshare proxy"
-        echo "    -r      Reset proxy settings"
-        echo "    -s      Enable Socks Proxy"
-        echo "    -sc     Setup Custom socks proxy port"
-        echo ""
-        ;;
+function _checkingPackage(){
+  while getopts ":i:p:" opt; do
+    case $opt in
+      "i") local code=$OPTARG;;
+      "p") local name=$OPTARG;;
+      \? ) _HandleWarn "Invalid option" >&2; return 1; break;;
     esac
-}
-
-function redns() {
-    if [[ $system == 'termux' ]]; then
-        echo "$not_support"
-        return 1
-    elif [[ $system == 'windows' ]]; then
-        powershell.exe /c "ipconfig /flushdns"
-    else
-        if [[ $pm == 'apt' ]]; then
-            sudo systemd-resolve --flush-caches
-        elif [[ $pm == 'apk' ]]; then
-            sudo rc-service dnsmasq restart
-        elif [[ $pm == 'zypper' ]]; then
-            sudo systemctl restart systemd-resolved.service
-        elif [[ $pm == 'dnf' || $pm == 'yum' ]]; then
-            sudo systemd-resolve --flush-caches
-        elif [[ $pm == 'pkg' ]]; then
-            sudo service nscd restart
-        elif [[ $pm == 'xbps-install' ]]; then
-            sudo sv restart dnsmasq
-        else
-            echo "$not_support"
-            return 1
-        fi
-    fi
-}
-
-function cloudflare() {
-    if [[ -n $(search cloudflared &>/dev/null | grep "cloudflared") ]]; then
-        if ! which cloudflared &>/dev/null; then
-            echo "cloudflared is not installed. Installing now..."
-            inocon cloudflared &>/dev/null
-            return 1
-        fi
-    else
-        system_architecture=$(uname -m)
-        case $system_architecture in
-        x86_64) sudo wget -O /usr/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 ;;
-        i686) sudo wget -O /usr/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386 ;;
-        armv7l) sudo wget -O /usr/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm ;;
-        aarch64) sudo wget -O /usr/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 ;;
-        *)
-            echo "Error: Unsupported system architecture."
-            return 1
-            ;;
-        esac
-        sudo chmod +x /usr/bin/cloudflared
-        return 1
-    fi
-
-    function usage() {
-        echo "Usage: cloudflare [options]"
-        echo ""
-        echo "Options:"
-        echo "------------------------------------------------"
-        echo "    -c <tunnel>         Create a new tunnel"
-        echo "    -C                  Configuration"
-        echo "    -d <tunnel>         Delete a tunnel"
-        echo "    -h                  Show this message"
-        echo "    -L                  List available tunnels"
-        echo "    -l                  Login to Cloudflare"
-        echo "    -r <tunnel> DOMAIN  Route a DNS entry for the tunnel"
-        echo "    -s <tunnel>         Start a tunnel"
-    }
-    configs=false
-    while getopts ":s:c:d:r:ChlL" opt; do
-        case $opt in
-        C)
-            configs=true
-            break
-            ;;
-        s)
-            cloudflared tunnel run "$OPTARG"
-            break
-            ;;
-        l)
-            if [[ -f $HOME/.cloudflared/cert.pem ]]; then
-                echo "You detected logged in, delete cert.pem file for relogin"
-                return 1
-            fi
-            cloudflared tunnel login
-            break
-            ;;
-        c)
-            cloudflared tunnel create "$OPTARG"
-            break
-            ;;
-        L)
-            for file in $HOME/.cloudflared/*.json; do
-                filename=$(basename "$file" .json)
-                break
-            done
-            if [[ -z $filename ]]; then
-                echo "No tunnel found, use -c instead to create tunnel"
-                return 1
-            fi
-            echo $filename
-            #cloudflared tunnel list
-            break
-            ;;
-        d)
-            cloudflared tunnel delete "$OPTARG"
-            break
-            ;;
-        r)
-            if [ -z "$3" ]; then
-                echo "Error: Domain name required for -r option"
-                usage
-                return 1
-            fi
-            cloudflared tunnel route dns "$OPTARG" "$2"
-            break
-            ;;
-        h) usage ;;
-        \?)
-            echo "Invalid option: -$OPTARG" >&2
-            usage
-            return 1
-            ;;
-        :)
-            echo "Option -$OPTARG requires an argument." >&2
-            usage
-            return 1
-            ;;
-        esac
-    done
-    if [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-    if [[ ! -f $HOME/.cloudflared/cert.pem ]]; then
-        echo "You detected not log in, please login first"
-        return 1
-    fi
-    if $configs; then
-        PS3="Select location: "
-        select loc in $HOME/.cloudflared $HOME/.cloudflare-warp $HOME/cloudflare-warp /etc/cloudflared /usr/local/etc/cloudflared; do
-            case $loc in
-            $HOME/.cloudflared)
-                if [[ ! -d $HOME/.cloudflared ]]; then
-                    mkdir -p $HOME/.cloudflared
-                fi
-                dir=$HOME/.cloudflared
-                break
-                ;;
-            $HOME/.cloudflare-warp)
-                if [[ ! -d $HOME/.cloudflare-warp ]]; then
-                    mkdir -p $HOME/.cloudflare-warp
-                fi
-                dir=$HOME/.cloudflare-warp
-                break
-                ;;
-            $HOME/cloudflare-warp)
-                if [[ ! -d $HOME/cloudflare-warp ]]; then
-                    mkdir -p $HOME/cloudflare-warp
-                fi
-                dir=$HOME/cloudflare-warp
-                break
-                ;;
-            /etc/cloudflared)
-                if [[ ! -d /etc/cloudflared ]]; then
-                    sudo mkdir -p /etc/cloudflared
-                fi
-                dir=/etc/cloudflared
-                break
-                ;;
-            /usr/local/etc/cloudflared)
-                if [[ ! -d /usr/local/etc/cloudflared ]]; then
-                    sudo mkdir -p /usr/local/etc/cloudflared
-                fi
-                dir=/usr/local/etc/cloudflared
-                break
-                ;;
-            *)
-                echo "Invalid!"
-                return 1
-                ;;
-            esac
-        done
-        PS3="Select action: "
-        select act in Create Add Delete Show; do
-            case $act in
-            Create)
-                if [[ -f $(ls $dir/*.json) ]]; then
-                    echo "Tunnel is exists"
-                    return 1
-                fi
-                echo -ne "Input ID Tunnel: "
-                read tunnelID
-                if [[ -z $tunnelID ]]; then
-                    echo "Cancel action"
-                    return 1
-                fi
-                if [[ ! -f $dir/config.yaml ]]; then
-                    echo -ne "tunnel: $tunnelID\ncredentials-file: ${dir}/${tunnelID}.json\ningress:\n  - service: http_status:404" >$dir/config.yaml
-                    echo "Success create config.yaml file"
-                else
-                    echo "File config is exists"
-                fi
-                break
-                ;;
-            Add)
-                if [[ ! -f $dir/config.yaml ]]; then
-                    echo "Use option Create first"
-                    return 1
-                fi
-                echo -n "Enter hostname: "
-                read hostname
-                echo -n "Enter service (in the format host:port): "
-                read service
-                sed -i "/http_status:404/ i \  - hostname: $hostname\n    service: $service" $dir/config.yaml
-                echo "Ingress added successfully"
-                break
-                ;;
-            Delete)
-                if [[ ! -f $dir/config.yaml ]]; then
-                    echo "Use option Create first"
-                    return 1
-                fi
-                local check=$(sed -n '/ingress:/,/- service: http_status:404/p' $dir/config.yaml | grep -oP '(?<=hostname: ).*' | awk '{print $1}')
-                if [[ -z $check ]]; then
-                    echo "No hostname configured, use Add instead."
-                    return 1
-                fi
-                PS3="Select to delete: "
-                select hostname in $check; do
-                    sed -i "/- hostname: $hostname/,+1 d" $dir/config.yaml
-                    echo "Ingress deleted successfully"
-                    break
-                done
-                break
-                ;;
-            Show)
-                if [[ ! -f $dir/config.yaml ]]; then
-                    echo "Use option Create first"
-                    return 1
-                fi
-                check=$(sed -n '/ingress:/,/- service: http_status:404/p' $dir/config.yaml | grep -oP '(?<=hostname: ).*' | awk '{print $1}')
-                if [[ -z $check ]]; then
-                    echo "No hostname configured, use Add instead."
-                    return 1
-                fi
-                echo $check
-                break
-                ;;
-            *)
-                echo "Invalid select! Try again"
-                return 1
-                ;;
-            esac
-        done
-    fi
-
-}
-
-function speeds() {
-    if [[ $system == 'termux' ]]; then
-        if ! which speedtest-go &>/dev/null; then
-            echo "speedtest-go not found. Installing now..."
-            install speedtest-go -y 
-            return 1
-        else
-            speedtest-go
-        fi
-    else
-        if ! which speedtest &>/dev/null; then
-            echo "speedtest not found. Installing now..."
-            inocon speedtest-cli &>/dev/null
-            $0 $*
-        else
-            speedtest
-        fi
-    fi
-}
-########################### END NETTOOL ###########################
-
-############################# SERVICE #############################
-
-function play() {
-    echo "Hope you fun to play this game!"
-    local list=("Moon-buggy" "Tetris" "Pacman" "Space-Invaders" "Snake" "Greed" "Nethack" "Sudoku" "2048")
-    PS3="Choose game: "
-    select choosed in "${list[@]}"; do
-        case $choosed in
-        Moon-buggy)
-            gamename="moon-buggy"
-            break
-            ;;
-        Tetris)
-            gamename="bastet"
-            break
-            ;;
-        Pacman)
-            gamename="pacman"
-            break
-            ;;
-        Space-Invaders)
-            gamename="ninvaders"
-            break
-            ;;
-        Snake)
-            gamename="nsnake"
-            break
-            ;;
-        Greed)
-            gamename="greed"
-            break
-            ;;
-        Nethack)
-            gamename="nethack"
-            break
-            ;;
-        Sudoku)
-            gamename="nudoku"
-            break
-            ;;
-        2048)
-            gamename="2048"
-            break
-            ;;
-        *) echo "Invalid input. Try again!" ;;
-        esac
-    done
-
-    if ! which $gamename &>/dev/null; then
-        if [[ $gamename == "2048" ]]; then
-            install clang -y
-            wget -q https://raw.githubusercontent.com/mevdschee/2048.c/master/2048.c
-            gcc -o $PREFIX/bin/2048 2048.c
-            chmod +x $PREFIX/bin/2048
-            rm 2048.c
-        else
-            install $gamename -y
-        fi
-        $gamename
-    else
-        $gamename
-    fi
-}
-
-function kali() {
-    if [ "$system" != "termux" ]; then
-        echo "$not_support"
-        return 1
-    fi
-    if [ ! -f "$HOME/.config/.kali" ]; then
-        actions=("Install")
-    else
-        actions=("Uninstall" "Start-GUI" "Start-CLI" "End-GUI" "Passwd" Command "Root")
-    fi
-    echo -e "May you need 'NetHunter-KeX client' or 'AVNC' and 'Hacker’s keyboard'\n"
-    PS3="Choose an action: "
-    select action in "${actions[@]}"; do
-        case $action in
-        Install)
-            if [ ! -d "$HOME/storage" ]; then
-                termux-setup-storage
-            fi
-            if ! which wget &>/dev/null; then
-                install wget -y
-            fi
-            if [ ! -f "$HOME/nh-termux" ]; then
-                wget -q --show-progress -O "$HOME/nh-termux" "https://offs.ec/2MceZWr" && chmod +x "$HOME/nh-termux" && "$HOME/nh-termux"
-            else
-                chmod +x "$HOME/nh-termux" && "$HOME/nh-termux"
-            fi
-            if [ ! -d "$HOME/.config" ]; then
-                mkdir "$HOME/.config"
-            fi
-            touch "$HOME/.config/.kali"
-            break
-            ;;
-        Uninstall)
-            rm -rf $HOME/kali-arm64 $HOME/.config/.kali
-            break
-            ;;
-        Start-GUI)
-            nethunter kex &
-            break
-            ;;
-        Start-CLI)
-            nethunter
-            break
-            ;;
-        End-GUI)
-            nethunter kex stop
-            break
-            ;;
-        Passwd)
-            nethunter kex passwd
-            break
-            ;;
-        Command)
-            read -rp "Input command: " cmd
-            if [ -n "$cmd" ]; then
-                nethunter "$cmd"
-            else
-                echo "Invalid command."
-            fi
-            break
-            ;;
-        Root)
-            nethunter -r
-            break
-            ;;
-        *)
-            echo "Invalid input. Read more at https://www.kali.org/docs/nethunter/nethunter-rootless/"
-            ;;
-        esac
-    done
-}
-
-function sctl() {
-    if [[ $system == "termux" ]]; then
-        if which sv &>/dev/null; then
-            system_service="sv"
-        else
-            echo "termux service not found. Installing now..."
-            inocon termux-services &>/dev/null
-            echo -ne "Installation success.\nRestart termux for using service daemon."
-            return 1
-        fi
-    elif [[ $system == "windows" ]]; then
-        if which service &>/dev/null; then
-            system_service="service"
-        else
-            echo "$not_support"
-            return 1
-        fi
-    else
-        if which systemctl &>/dev/null; then
-            system_service="systemctl"
-        elif which service &>/dev/null; then
-            system_service="service"
-        elif which sv &>/dev/null; then
-            system_service="sv"
-        else
-            echo "$not_support"
-            return 1
-        fi
-    fi
-
-    # Set default values
-    action=""
-    service=""
-
-    function usage() {
-        if [[ $system == "termux" ]]; then
-            echo "Usage: sctl <option> [service]"
-            echo ""
-            echo "Options:"
-            echo "------------------------------------------------"
-            echo "  -d    Disable service"
-            echo "  -e    Enable service"
-            echo "  -h    Show this help message"
-            echo "  -R    Reload service"
-            echo "  -r    Restart service"
-            echo "  -s    Start service"
-            echo "  -S    Stop service"
-            echo "  -t    Status service"
-            return 1
-        elif [[ $system == "windows" ]]; then
-            echo "Usage: sctl <option> [service]"
-            echo ""
-            echo "Options:"
-            echo "------------------------------------------------"
-            echo "  -a    Show all services"
-            echo "  -h    Show this help message"
-            echo "  -R    Reload service"
-            echo "  -r    Restart service"
-            echo "  -s    Start service"
-            echo "  -S    Stop service"
-            echo "  -t    Status service"
-            return 1
-        else
-            echo "Usage: sctl <option> [service]"
-            echo ""
-            echo "Options:"
-            echo "------------------------------------------------"
-            echo "  -d    Disable service"
-            echo "  -e    Enable service"
-            echo "  -h    Show this help message"
-            echo "  -r    Restart service"
-            echo "  -s    Start service"
-            echo "  -S    Stop service"
-            echo "  -t    Status service"
-            echo ""
-            echo "  -D    Down service"
-            echo "  -R    Reload service"
-            echo "  -u    Up service"
-        fi
-    }
-
-    while getopts ":s:r:e:S:d:t:u:D:R:ah" opt; do
-        case $opt in
-        a) action="show-all" ;;
-        s)
-            action="start"
-            service="$OPTARG"
-            ;;
-        r)
-            action="restart"
-            service="$OPTARG"
-            ;;
-        e)
-            if [[ $system == "termux" ]]; then
-                action="sv-enable"
-            else
-                action="enable"
-            fi
-            service="$OPTARG"
-            ;;
-        S)
-            action="stop"
-            service="$OPTARG"
-            ;;
-        d)
-            if [[ $system == "termux" ]]; then
-                action="sv-disable"
-            else
-                action="disable"
-            fi
-            service="$OPTARG"
-            ;;
-        t)
-            action="status"
-            service="$OPTARG"
-            ;;
-        u)
-            action="up"
-            service="$OPTARG"
-            ;;
-        D)
-            action="down"
-            service="$OPTARG"
-            ;;
-        R)
-            action="reload"
-            service="$OPTARG"
-            ;;
-        h)
-            usage
-            return 1
-            ;;
-        :)
-            echo "Error: Option -$OPTARG requires an argument" >&2
-            return 1
-            ;;
-        *)
-            echo "Error: Invalid option -$OPTARG" >&2
-            return 1
-            ;;
-        esac
-    done
-
-    if [[ -z $action ]]; then
-        echo "Error: Must specify one option" >&2
-        usage
-        return 1
-    elif [[ $(echo $action | wc -w) -ne 1 ]]; then
-        echo "Error: Can only specify one option" >&2
-        usage
-        return 1
-    fi
-    if [[ $system == "termux" ]]; then
-        if [[ $action == "start" || $action == "restart" || $action == "stop" || $action == "reload" || $action == "status" || $action == "sv-enable" || $action == "sv-disable" ]]; then
-            $system_service $action $service
-        else
-            echo $not_support
-            return 1
-        fi
-    elif [[ $system == "windows" ]]; then
-        if [[ $action == "start" || $action == "restart" || $action == "stop" || $action == "reload" || $action == "status" ]]; then
-            sudo $system_service $service $action
-        elif [[ $action == "show-all" ]]; then
-            service --status-all
-        else
-            echo $not_support
-            return 1
-        fi
-    else
-        if [[ $system_service == "systemctl" ]]; then
-            if [[ $action == "start" || $action == "restart" || $action == "stop" || $action == "reload" || $action == "status" || $action == "enable" || $action == "disable" ]]; then
-                sudo $system_service $action $service
-            else
-                echo $not_support
-                return 1
-            fi
-        elif [[ $system_service == "service" ]]; then
-            if [[ $action == "start" || $action == "restart" || $action == "stop" || $action == "reload" || $action == "status" || $action == "enable" || $action == "disable" ]]; then
-                sudo $system_service $service $action
-            else
-                echo $not_support
-                return 1
-            fi
-        elif [[ $system_service == "sv" ]]; then
-            if [[ $action == "start" || $action == "restart" || $action == "stop" ]]; then
-                sudo $system_service $action $service
-            elif [[ $action == "enable" ]]; then
-                sudo $system_service enable $service
-            elif [[ $action == "disable" ]]; then
-                sudo $system_service disable $service
-            elif [[ $action == "status" ]]; then
-                sudo $system_service status $service
-            elif [[ $action == "up" ]]; then
-                sudo $system_service up $service
-            elif [[ $action == "down" ]]; then
-                sudo $system_service down $service
-            else
-                echo $not_support
-                return 1
-            fi
-        fi
-    fi
-}
-
-function sc() {
-    if ! which ssh &>/dev/null; then
-        echo "openssh is not installed. Installing now..."
-        inocon openssh &>/dev/null
-        return 1
-    fi
-    function usage() {
-        echo "Usage: sc [options]"
-        echo ""
-        echo "Options :"
-        echo "------------------------------------------------"
-        echo "    -a ACCOUNT  Add ssh account"
-        echo "    -c          Connect ssh account"
-        echo "    -d          Delete ssh account"
-        echo "    -h          Show this message"
-        echo "    -k KEY      Add public key"
-        echo "    -K          Show default public key"
-        echo "    -s          Show all ssh account"
-        return 1
-    }
-    file_config=$HOME/.scrc
-    if [[ ! -f $HOME/.scrc ]]; then
-        touch $file_config
-    fi
-    if [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-    while getopts ":a:k:Ksdch" opt; do
-        case $opt in
-        a)
-            if [[ ! $OPTARG =~ '^[^@]+@[^@]+$' ]]; then
-                echo "Error: Input is must be user@hostname only"
-                return 1
-            else
-                echo $OPTARG >>$file_config 2>/dev/null
-                echo "[*] Success added $OPTARG"
-            fi
-            break
-            ;;
-        d)
-            if [[ -z $(cat $file_config) ]]; then
-                echo "Error: Do not have ssh account"
-                return 1
-            else
-                declare -A options=()
-                while read -r line; do
-                    options["$line"]=$line
-                done <"$file_config"
-                PS3="Choose account: "
-                select option in "${options[@]}"; do
-                    sed -i "/$option/d" $file_config
-                    if grep -q $option $file_config; then
-                        echo "Error: Failed to delete account $option"
-                        return 1
-                    else
-                        echo "Success delete account $option"
-                        return 1
-                    fi
-                done
-            fi
-            break
-            ;;
-        s)
-            if [[ -z $(cat $file_config) ]]; then
-                echo "Error: No has ssh account"
-                return 1
-            else
-                echo -ne "Show all account :\n"
-                cat $file_config
-            fi
-            break
-            ;;
-        k)
-            if [ ! -f ~/.ssh/authorized_keys ]; then
-                if [ !-d ~/.ssh ]; then
-                    mkdir ~/.ssh
-                fi
-                touch ~/.ssh/authorized_keys
-            fi
-            ssh_regex='^(ssh-ed25519|ssh-rsa)\s+[A-Za-z0-9+/]+[=]{0,2}\s+[A-Za-z0-9@.-]+$'
-            if [[ ! $OPTARG =~ $ssh_regex ]]; then
-                echo "Error: Input is must be ssh key only"
-                return 1
-            else
-                echo $OPTARG >>~/.ssh/authorized_keys 2>/dev/null
-                echo "Success: Added key$OPTARG"
-            fi
-            break
-            ;;
-        K)
-            local choosed=("rsa" "ed25519")
-            PS3="What encryption type? "
-            select protocol in "${choosed[@]}"; do
-                case $protocol in
-                rsa)
-                    if [[ ! -f $HOME/.ssh/id_rsa.pub || ! -f $HOME/.ssh/id_rsa ]]; then
-                        ssh-keygen -t rsa -b 4096 -o -a 100
-                        cat $HOME/.ssh/id_rsa.pub
-                    else
-                        cat $HOME/.ssh/id_rsa.pub
-                    fi
-                    break
-                    ;;
-                ed25519)
-                    if [[ ! -f $HOME/.ssh/id_ed25519.pub || ! -f $HOME/.ssh/id_ed25519 ]]; then
-                        ssh-keygen -t ed25519 -a 100
-                        cat $HOME/.ssh/id_ed25519.pub
-                    else
-                        cat $HOME/.ssh/id_ed25519.pub
-                    fi
-                    break
-                    ;;
-                esac
-            done
-            break
-            ;;
-        c)
-            if [[ -z $(cat $file_config) ]]; then
-                echo "Error: No has ssh account"
-                return 1
-            else
-                function check() {
-                    local port=$1
-                    if ! [[ $port =~ ^[0-9]+$ ]]; then
-                        echo "[!] Your input is not valid"
-                        return 1
-                    fi
-                    if (($port < 1 || $port > 65535)); then
-                        echo "[!] Only port 1 - 65535"
-                        return 1
-                    fi
-                }
-                declare -A options=()
-                while read -r line; do
-                    options["$line"]=$line
-                done <"$file_config"
-
-                PS3="Choose account: "
-                select option in "${options[@]}"; do
-                    if [[ -n $option ]]; then
-                        account_ssh=${options["$option"]}
-                        break
-                    else
-                        echo "[!] Invalid option. Try again!"
-                    fi
-                done
-                echo -n "Custom ssh port [22]: "
-                read custom_port
-                if [[ -n $custom_port ]]; then
-                    check $custom_port
-                fi
-                echo -n "Custom dynamic local port [default]: "
-                read local_port
-                if [[ -n $local_port ]]; then
-                    check $local_port
-                fi
-
-                if [[ -z $custom_port ]]; then
-                    port="22"
-                else
-                    port="$custom_port"
-                fi
-                if [[ -z $local_port ]]; then
-                    socks=""
-                else
-                    socks="-D 127.0.0.1:$local_port"
-                fi
-                chiper="Ciphers=chacha20-poly1305@openssh.com"
-                keax="KexAlgorithms=curve25519-sha256@libssh.org"
-                macs="MACs=hmac-sha2-256-etm@openssh.com"
-                hka="HostKeyAlgorithms=ssh-ed25519"
-                ssh $account_ssh -p $port $socks -o $chiper -o $keax -o $macs -o $hka
-            fi
-            break
-            ;;
-        h)
-            usage
-            break
-            ;;
-        \?)
-            echo "Invalid option: -$OPTARG" >&2
-            usage
-            ;;
-        :)
-            echo "Option -$OPTARG requires an ssh account." >&2
-            usage
-            break
-            return 1
-            ;;
-        *) echo "Invalid command" ;;
-        esac
-    done
-}
-
-function backup() {
-    PS3="Select what backup: "
-    select typebr in Folder Database; do
-        type=$typebr
-        break
-    done
-    PS3="Select action: "
-    select actionbr in Backup Restore; do
-        action=$actionbr
-        break
-    done
-    function usage() {
-        echo "Usage: backup [options] <path to backup and restore>"
-        echo ""
-        echo "Options:"
-        echo "------------------------------------------------"
-        echo "    -d DIR         Directory to backup"
-        echo "    -h             Show this message"
-    }
-    while getopts ":f:d:h" opt; do
-        case $opt in
-        d) directory="$OPTARG" ;;
-        h) usage ;;
-        \? | *)
-            echo "Invalid option: -$OPTARG" >&2
-            usage
-            return 1
-            ;;
-        :)
-            echo "Option -$OPTARG requires an argument." >&2
-            usage
-            return 1
-            ;;
-        esac
-    done
-    if [[ $type == 'Folder' ]]; then
-        if [[ -z $directory ]]; then
-            echo "Use option -d for use this setup"
-            return 1
-        fi
-
-        if [[ $action == 'Backup' ]]; then
-            path="Backup-F-$filename-$(date +%Y-%m-%d).tar.gz"
-            tar -czvf "$path" "$directory"
-        elif [[ $action == 'Restore' ]]; then
-            PS3="Select file: "
-            select files in $(ls *.tar.gz); do
-                if [[ -z $files ]]; then
-                    echo "Invalid selection"
-                    continue
-                else
-                    tar -xzvf "$files" -C "$directory"
-                    break
-                fi
-            done
-        fi
-    elif [[ $type == 'Database' ]]; then
-        if [[ $action == 'Backup' ]]; then
-            echo "Coming soon"
-        elif [[ $action == 'Restore' ]]; then
-            echo "Coming soon"
-        fi
-    fi
-    if [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-}
-
-function monitoring() {
-    if [[ $system == 'termux' ]]; then
-        echo $not_support
-        return 1
-    fi
-    install=false
-    show=false
-    function usage() {
-        echo "Usage: monitoring [options] <path to backup and restore>"
-        echo ""
-        echo "Options:"
-        echo "------------------------------------------------"
-        echo "    -h             Show this message"
-        echo "    -i             Install monitoring"
-        echo "    -s             Show monitoring"
-    }
-    while getopts "sih" opt; do
-        case $opt in
-        i)
-            install=true
-            break
-            ;;
-        s)
-            show=true
-            break
-            ;;
-        h)
-            usage
-            break
-            ;;
-        *)
-            echo "Invalid option" >&2
-            break
-            ;;
-        esac
-    done
-    if $show; then
-        while true; do
-            if [ ! -d ~/.log ]; then
-                mkdir -p ~/.log
-            fi
-            echo -ne "Monitoring is running.."
-            echo "CPU   MEM    SWP     DATE                UPTIME" >~/.log/monitoring-$(date +%F).log
-            while true; do
-                cpu="$(top -b -n1 | grep "Cpu(s)" | awk '{print $2 + $4}')"
-                if [[ $cpu == "0" ]]; then
-                    cpu_usage="$cpu.0%"
-                else
-                    cpu_usage="$cpu%"
-                fi
-                memory_usage=$(free -m | awk 'NR==2{printf "%.2f%%\t\t", $3*100/$2}' | tr -d '[:space:]')
-                swap_usage=$(free -m | awk 'NR==3{printf "%.2f%%\t\t", $3*100/$2}' | tr -d '[:space:]')
-                dates=$(date +%F_%H:%M:%S)
-                uptime=$(uptime | awk '{print $3,$4}' | sed 's/,//')
-                if [ ! -f ~/.log/monitoring-$(date +%F).log ]; then
-                    touch ~/.log/monitoring-$(date +%F).log
-                fi
-                #echo "$cpu_usage $memory_usage $swap_usage, $dates, $uptime"
-                echo "$cpu_usage $memory_usage $swap_usage, $dates, $uptime" >>~/.log/monitoring-$(date +%F).log
-                if [[ $(date +%H:%M:%S) == "23:59:59" ]]; then
-                    break 2
-                fi
-            done
-        done
-    elif $install; then
-        echo "Coming soon"
-    fi
-    if [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-}
-
-function webservice() {
-    webs=false
-    PS3="What service do you want?"
-    select service in Web; do
-        case $service in
-        Web)
-            webs=true
-            break
-            ;;
-        *) echo "Error: Need valid number selected" ;;
-        esac
-    done
-    if $webs; then
-        function addsites() {
-            echo -ne "Input port (example: 8080): "
-            read port
-            if [[ -z $port ]]; then
-                echo "Need port for web server!"
-                return 1
-            fi
-            echo -ne "Input path DocumentRoot (example: /var/www/html): "
-            read docroot
-            if [[ -z $docroot ]]; then
-                echo "Need path of web!"
-                return 1
-            fi
-            echo -ne "Input domain if you has (example: example.com): "
-            read domain
-            if [[ -z $domain ]]; then
-                domain="_"
-            fi
-            if [[ $system == 'termux' ]]; then
-                port_Listen=$(grep -E '^\s*Listen\s+[0-9]+' $PREFIX/etc/apache2/httpd.conf | grep -v '#' | tr -s ' ' | tail -n 1)
-                sed -i "/$port_Listen/i $port/" $PREFIX/etc/apache2/httpd.conf
-                echo -ne "<VirtualHost *:$port>\n  DocumentRoot $docroot\n  ServerName $domain\n  <Directory $docroot>\n    AllowOverride None\n    Options Indexes FollowSymLinks\n    Require all granted\n  </Directory>\n  <IfModule dir_module>\n    DirectoryIndex index.php\n  </IfModule>\n</VirtualHost>" >>$PREFIX/etc/apache2/extra/httpd-vhosts.conf
-            else
-                echo "Coming soon"
-            fi
-        }
-        function deletesites() {
-            if [[ $system == 'termux' ]]; then
-                PS3='Select port:'
-                check=$(grep -E '^\s*Listen\s+[0-9]+' $PREFIX/etc/apache2/httpd.conf | grep -v '#' | tr -s ' ' | tail -n 1 | awk '{print $2}')
-                select opt in $check; do
-                    sed -i "/$opt/d" $PREFIX/etc/apache2/httpd.conf
-                    break
-                done
-                if [[ -z $(echo $check | grep "$opt") ]]; then
-                    echo "Success delete sites"
-                else
-                    echo "Failed delete sites"
-                fi
-            else
-                echo "Coming soon"
-            fi
-        }
-        function enable() {
-            if [[ $system == 'termux' ]]; then
-                port_Listen=$(grep -E '^\s*Listen\s+[0-9]+' $PREFIX/etc/apache2/httpd.conf | grep -v '#' | tr -s ' ' | tail -n 1)
-                sed -i "/$port_Listen/i $port/" $PREFIX/etc/apache2/httpd.conf
-            else
-                echo "Coming soon"
-            fi
-        }
-        function disable() {
-            if [[ $system == 'termux' ]]; then
-                port_Listen=$(grep -E '^\s*Listen\s+[0-9]+' $PREFIX/etc/apache2/httpd.conf | grep -v '#' | tr -s ' ' | tail -n 1)
-                sed -i "/$port_Listen/d" $PREFIX/etc/apache2/httpd.conf
-            else
-                echo "Coming soon"
-            fi
-        }
-        function show() {
-            if [[ $system == 'termux' ]]; then
-                if [[ -f $PREFIX/etc/apache2/extra/httpd-vhosts.conf ]]; then
-                    cat $PREFIX/etc/apache2/extra/httpd-vhosts.conf
-                    return 1
-                fi
-                echo "Install web server first"
-            else
-                echo "Coming soon"
-            fi
-        }
-        function update() {
-            if [[ $system == 'termux' ]]; then
-                if [[ -f $PREFIX/etc/apache2/httpd.conf ]]; then
-                    nano $PREFIX/etc/apache2/httpd.conf
-                    return 1
-                fi
-                echo "Cannot find '$PREFIX/etc/apache2/httpd.conf'"
-            else
-                echo "Coming soon"
-            fi
-        }
-        function ssl() {
-            if [[ $system == 'termux' ]]; then
-                echo "$not_support"
-                echo "Use cloudflared tunnel instead."
-                return 1
-            else
-                echo "Coming soon"
-            fi
-        }
-        if [[ $system == 'termux' ]]; then
-            if [[ ! -f $PREFIX/var/log/installed ]]; then
-                echo "Web server not configured. Configuration now..."
-                packages=("apache2" "libapache2-mod-php" "autoconf" "automake" "bison" "bzip2" "clang" "cmake" "coreutils" "diffutils" "flex" "gawk" "git" "grep" "gzip" "libtool" "make" "patch" "perl" "sed" "silversearcher-ag" "tar" "apache2" "php" "php-apache" "php-apache-ldap" "php-apache-opcache" "php-apache-pgsql" "php-apache-sodium" "php-apcu" "php-fpm" "php-imagick" "php-ldap" "php-pgsql" "php-psr" "php-redis" "php-sodium" "php-zephir-parser" "mariadb" "phpmyadmin")
-                for i in "${packages[@]}"; do
-                    if ! $pm list-installed &>/dev/null | grep -w $i &>/dev/null; then
-                        echo "Package $i is not installed, installing now..."
-                        install $i -y &>/dev/null
-                        break
-                    fi
-                done
-                sed -i 's/LoadModule mpm_worker_module libexec\/apache2\/mod_mpm_worker.so/#LoadModule mpm_worker_module libexec\/apache2\/mod_mpm_worker.so/' $PREFIX/etc/apache2/httpd.conf
-                sed -i 's/#LoadModule mpm_prefork_module libexec\/apache2\/mod_mpm_prefork.so/LoadModule mpm_prefork_module libexec\/apache2\/mod_mpm_prefork.so/' $PREFIX/etc/apache2/httpd.conf
-                sed -i 's/#LoadModule rewrite_module libexec\/apache2\/mod_rewrite.so/LoadModule rewrite_module libexec\/apache2\/mod_rewrite.so/' $PREFIX/etc/apache2/httpd.conf
-                sed -i '/<IfModule unixd_module>/i LoadModule php_module libexec\/apache2\/libphp.so' $PREFIX/etc/apache2/httpd.conf
-                sed -i '/<IfModule unixd_module>/i AddHandler php-script .php' $PREFIX/etc/apache2/httpd.conf
-                sed -i "s/\(\$cfg\['Servers'\]\[\$i\]\['host'\]\s*=\s*\)'localhost';/\1'127.0.0.1:3306';/" $PREFIX/share/phpmyadmin/config.inc.php
-                echo "Include etc/apache2/extra/php_module.conf" >>$PREFIX/etc/apache2/httpd.conf
-                touch $PREFIX/etc/apache2/extra/php_module.conf
-                echo "Done configure webserver..."
-                echo "Setup phpmyadmin..."
-                sed -i 's/#Include etc\/apache2\/extra\/httpd-vhosts.conf/Include etc\/apahce2\/extra\/httpd-vhosts.conf/g' $PREFIX/etc/apache2/httpd.conf
-                sed -i "s///g" $PREFIX/share/phpmyadmin/config.inc.php
-                sed -i '/Listen 8080/i Listen 8081/' $PREFIX/etc/apache2/httpd.conf
-                echo -ne "<VirtualHost *:8081>\n  DocumentRoot "/data/data/com.termux/files/usr/share/phpmyadmin"\n  <Directory "/data/data/com.termux/files/usr/share/phpmyadmin">\n    AllowOverride None\n    Options Indexes FollowSymLinks\n    Require all granted\n  </Directory>\n  <IfModule dir_module>\n    DirectoryIndex index.php\n  </IfModule>\n</VirtualHost>" >>$PREFIX/etc/apache2/extra/httpd-vhosts.conf
-                echo "Web server ready..."
-                touch $PREFIX/var/log/installed
-                return 1
-            else
-                PS3="Select action: "
-                select act in Add Delete Enable Disable Show Update SSL; do
-                    case $act in
-                    Add)
-                        addsites
-                        break
-                        ;;
-                    Delete)
-                        deletesites
-                        break
-                        ;;
-                    Enable)
-                        enable
-                        break
-                        ;;
-                    Disable)
-                        disable
-                        break
-                        ;;
-                    Show)
-                        show
-                        break
-                        ;;
-                    Update)
-                        update
-                        break
-                        ;;
-                    SSL)
-                        ssl
-                        break
-                        ;;
-                    *)
-                        echo "Select that number, not others!"
-                        break
-                        ;;
-                    esac
-                done
-            fi
-        else
-            if [[ ! -f /var/log/installed ]]; then
-                echo "Web server not configured. Configuration now..."
-                if ! which nginx &>/dev/null; then
-                    echo "nginx not found. Installing now..."
-                    install nginx -y
-                fi
-                if ! which mysql &>/dev/null; then
-                    echo "mysql not found. Installing mariadb now..."
-                    if [[ $system == 'termux' ]]; then
-                        install mariadb -y
-                    else
-                        install mariadb-server -y
-                    fi
-                fi
-                if ! which php &>/dev/null; then
-                    echo "php not found. Installing now..."
-                    if [[ $pm == 'apt' ]]; then
-                        install software-properties-common php8.1 php8.1-fpm php8.1-mysql php8.1-curl php8.1-gd php8.1-intl php8.1-mbstring php8.1-soap php8.1-xml php8.1-zip
-                    elif [[ $pm == 'pacman' ]]; then
-                        install php php-fpm php-mysql php-curl php-gd php-intl php-mbstring php-soap php-xml php-zip
-                    elif [[ $pm == 'zypper' ]]; then
-                        install php8 php8-fpm php8-mysql php8-curl php8-gd php8-intl php8-mbstring php8-soap php8-xml php8-zip
-                    elif [[ $pm == 'apk' ]]; then
-                        install php8 php8-fpm php8-mysqli php8-curl php8-gd php8-intl php8-mbstring php8-soap php8-xml php8-zip
-                    else
-                        echo "$not_support"
-                        return 1
-                    fi
-                fi
-                echo "Done configure webserver..."
-            else
-                PS3="Select action: "
-                select act in Add Delete Enable Disable Show Update SSL; do
-                    case $act in
-                    Add)
-                        addsites
-                        break
-                        ;;
-                    Delete)
-                        deletesites
-                        break
-                        ;;
-                    Enable)
-                        enable
-                        break
-                        ;;
-                    Disable)
-                        disable
-                        break
-                        ;;
-                    Show)
-                        show
-                        break
-                        ;;
-                    Update)
-                        update
-                        break
-                        ;;
-                    SSL)
-                        ssl
-                        break
-                        ;;
-                    *)
-                        echo "Select that number, not others!"
-                        break
-                        ;;
-                    esac
-                done
-            fi
-        fi
-
-    fi
-}
-
-function firewall() {
-    if [[ $system == 'termux' ]]; then
-        echo "$not_support"
-        return 1
-    fi
-    echo "Coming soon"
+  done
+  [[ -z $code ]] && echo "Option install package ('-i') and optional package ('-p') is required" && return 0
+  [[ -z $name ]] && name=$code
+  [[ ! $(command -v $name 2>/dev/null) ]] && _HandleWarn "$name not installed. Installing now!"
+  if [[ ! $(search $name 2>/dev/null) ]]; then
+    _HandleError "$name is not found on the repository"
     return 1
+  fi
+  _HandleStart "Installing $code"
+  local tryInstall=$(installnc $code &>/dev/null)
+  [[ $? -eq 0 && $(command -v $name) ]] && \
+    _HandleResult "Success installing $name" && return 0 || \
+    _HandleError "Failed installing $name" && return 1
 }
-########################### END SERVICE ###########################
-############################# REGULAR #############################
-function cloudfile() {
-    if ! which curl &>/dev/null; then
-        echo "curl not found. Installing now..."
-        inocon curl &>/dev/null
-        return 1
-    fi
-    if ! which filebrowser &>/dev/null; then
-        echo "filebrowser not found. Installing now..."
-        if ! which filebrowser &>/dev/null; then
-            inocon bash &>/dev/null
-        fi
-        curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash &>/dev/null
-    fi
 
-    function usage() {
-        echo "Usage: cloudfile [options]"
-        echo ""
-        echo "Options :"
-        echo "------------------------------------------------"
-        echo "    -a IP             Set the IP address to listen [Default: 0.0.0.0]"
-        echo "    -d DIR            Set the directory to serve [Default: home directory]"
-        echo "    -h                Show this message"
-        echo "    -p NUMBER         Set the port number [Default: 8080]"
-        return 1
-    }
+function install(){
+  [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
+  case $_packageManager in
+    apt|dnf|yum|pkg|zypper) sudo $_packageManager install $*;;
+    pacman|xbps-install) sudo $_packageManager -S $*;;
+    apk) sudo $_packageManager add $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
 
-    while getopts ":p:d:a:h" option; do
-        case "$option" in
-        a) addr="$OPTARG" ;;
-        p) port="$OPTARG" ;;
-        d) dirs="$OPTARG" ;;
-        h)
-            usage
-            return
-            ;;
-        \?)
-            echo "[!] Invalid option: -$OPTARG"
-            return
-            ;;
-        esac
-    done
+function installnc(){
+  [[ $_systemType == "termux" ]] && $_packageManager install $* -y && return 0
+  case $_packageManager in
+    apt|dnf|yum|pkg|zypper) sudo $_packageManager install -y $*;;
+    pacman) sudo $_packageManager -S --noconfirm $*;;
+    xbps-install) sudo xbps-install -Sy $*;;
+    apk) sudo $_packageManager add --no-cache --quiet $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
 
-    if [[ -z $addr ]]; then addr="0.0.0.0"; fi
-    if [[ $system == 'termux' ]]; then
-        if [[ -z $port ]]; then port="8080"; fi
+function update(){
+  [[ $_systemType == "termux" ]] && $_packageManager update && return 0
+  case $_packageManager in
+    apt|apk|pkg) sudo $_packageManager update;;
+    pacman) sudo $_packageManager -Syu;;
+    xbps-install) sudo $_packageManager -Su;;
+    zypper|dnf|yum) sudo $_packageManager update;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function upgrade(){
+  [[ $_systemType == "termux" ]] && $_packageManager upgrade && return 0
+  case $_packageManager in
+    pacman) sudo $_packageManager -Syu;;
+    xbps-install) sudo $_packageManager -Su;;
+    zypper|dnf|yum) sudo $_packageManager update;;
+    apt|pkg|apk) sudo $_packageManager upgrade;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function remove(){
+  [[ $_systemType == "termux" ]] && $_packageManager uninstall $* && return 0
+  case $_packageManager in
+    pkg|apt|zypper|dnf|yum) sudo $_packageManager remove $*;;
+    pacman) sudo $_packageManager -R $*;;
+    xbps-install) sudo xbps-remove -R $*;;
+    apk) sudo $_packageManager del $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function search(){
+  [[ $_systemType == "termux" ]] && $_packageManager search $* && return 0
+  case $_packageManager in
+    apt|zypper|apk|pkg|dnf|yum) $_packageManager search $*;;
+    xbps-install) xbps-query -Rs $*;;
+    pacman) $_packageManager -Ss $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function orphan(){
+  [[ $_systemType == "termux" ]] && $_packageManager autoremove && \
+    $_packageManager autoclean && return 0
+  case $_packageManager in
+    apt|apk|pkg|dnf|yum) sudo $_packageManager autoremove;;
+    pacman) sudo $_packageManager -Rns $(pacman -Qtdq);;
+    zypper) sudo $_packageManager remove $(rpm -qa --qf "%{NAME}\n" | grep -vx "$(rpm -qa --qf "%{INSTALLTIME}:%{NAME}\n" | sort -n | uniq -f1 | cut -d: -f2-)");;
+    xbps-install) sudo xbps-remove -O;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function reinstall(){
+  [[ $_systemType == "termux" ]] && $_packageManager reinstall $* && return 0
+  case $_packageManager in
+    pacman) sudo $_packageManager -S --needed $*;;
+    zypper) sudo $_packageManager in -f $*;;
+    apk) sudo $_packageManager add --force --no-cache $*;;
+    xbps-install) sudo $_packageManager -f $*;;
+    yum|dnf) sudo $_packageManager reinstall $*;;
+    pkg) sudo $_packageManager install -f $*;;
+    apt) sudo apt reinstall $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function updateupgrade(){
+  [[ $_systemType == "termux" ]] && $_packageManager update && \
+    $_packageManager upgrade && return 0
+  case $_packageManager in
+    apt) sudo $_packageManager update && sudo $_packageManager upgrade -y;;
+    apk) sudo $_packageManager update && sudo $_packageManager upgrade;;
+    pacman) sudo $_packageManager -Syu;;
+    zypper|dnf|yum) sudo $_packageManager update;;
+    xbps-install) sudo $_packageManager -Su;;
+    pkg) sudo freebsd-update install;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function detail(){
+  [[ $_systemType == "termux" ]] && $_packageManager show $* && return 0
+  case $_packageManager in
+    apt) $_packageManager show $*;;
+    pacman) $_packageManager -Si $*;;
+    zypper|dnf|yum|pkg) $_packageManager info $*;;
+    apk) $_packageManager info -a $*;;
+    xbps-install) xbps-query -R $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function checkpackage(){
+  [[ $_systemType == "termux" ]] && echo $_notSupport && return 1
+  case $_packageManager in
+    apt) dpkg -C;;
+    pacman) $_packageManager -Qkk;;
+    zypper|dnf|yum) rpm -Va;;
+    apk|pkg) $_packageManager check;;
+    xbps-install) xbps-query -H check;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function listpackage(){
+  [[ $_systemType == "termux" ]] && $_packageManager list-installed && return 0
+  case $_packageManager in
+    apt) dpkg --list;;
+    pacman) $_packageManager -Q;;
+    zypper|dnf|yum) rpm -qa;;
+    apk) $_packageManager list;;
+    xbps-install) xbps-query -l;;
+    pkg) $_packageManager info;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+function holdpackage(){
+  [[ $_systemType == "termux" ]] && echo $_notSupport && return 1
+  case $_packageManager in
+    apt) sudo apt-mark hold $*;;
+    pacman) sudo $_packageManager -D $*;;
+    zypper) sudo $_packageManager addlock $*;;
+    apk) sudo $_packageManager add --lock $*;;
+    pkg) sudo $_packageManager lock $*;;
+    *) echo $_notSupport; return 1;;
+  esac
+}
+
+# AUR
+if [[ $(command -v yay) ]]; then
+    function auri() { yay -S $*; }
+    function aurinc() { yay -S --noconfirm $*; }
+    function auru() { yay -Sy $*; }
+    function auruu() { yay -Syu $*; }
+    function aurs() { yay -Ss $*; }
+    function aurr() { yay -Runscd $*; }
+fi
+
+# SNAP
+if [[ $(command -v snap) ]]; then
+  function snapi() { sudo snap install $*; }
+  function snapu() { sudo snap refresh $*; }
+  function snapv() { sudo snap revert $*; }
+  function snaps() { snap find $*; }
+  function snapl() { snap list $*; }
+  function snapla() { snap list --all $*; }
+  function snapon() { sudo snap enable $*; }
+  function snapoff() { sudo snap disable $*; }
+  function snapr() { sudo snap remove $*; }
+fi
+
+############################ NETTOOL #############################
+
+function myip(){
+  [[ ! $(command -v curl) ]] && _checkingPackage -i curl -p curl
+  if [[ ! $(command -v ip) ]]; then
+    if $_thisTermux; then
+      [[ $(search iproute2 2>/dev/null) ]] && _checkingPackage -i iproute2 -p ip
     else
-        if [[ -z $port ]]; then port="80"; fi
+      [[ $(search ip-utils 2>/dev/null) ]] && _checkingPackage -i ip-utils -p ip 
     fi
-    if [[ -z $dirs ]]; then dirs="$HOME"; fi
-    if [[ $pm == "apk" ]]; then
-        if ! which sudo &>/dev/null; then
-            inocon sudo &>/dev/null
+  fi
+  local ipPublic=$(curl -s -m 5 ifconfig.me)
+  local list_ipDevice=() list_macDevice=() list_ip6Device=() list_gateway=()
+  for checkGateway in $(ip route list match 0 table all scope global | awk '{for (i=1; i<=NF; i++) if ($i == "via") print $(i+1)}')
+  do
+    list_gateway+="${GREEN}$checkGateway${RESET}"
+  done
+  for device in $(ip route list match 0 table all scope global | grep "via" | awk '{for (i=1; i<=NF; i++) if ($i == "dev") print $(i+1)}')
+  do
+    checkIP=$(ip a show dev $device 2>/dev/null | awk '/inet / {print $2}' | cut -d '/' -f 1)
+    [[ $checkIP ]] && list_ipDevice+="${GREEN}$checkIP${RESET}"
+    checkMAC=$(ip a show dev $device 2>/dev/null | awk '/link\// {print $2}')
+    [[ $checkMAC ]] && list_macDevice+="${GREEN}$checkMAC${RESET}"
+    checkIPv6=$(ip a show dev $device 2>/dev/null | awk '/inet6/ {print $2}' | cut -d '/' -f 1)
+    [[ $checkIPv6 ]] && list_ip6Device+="${GREEN}$checkIPv6${RESET}" || list_ip6Device+="${YELLOW}Nonactive${RESET}"
+  done
+  local ipDevice=$(IFS=,; echo "${list_ipDevice[*]}") 
+  local macDevice=$(IFS=,; echo "${list_macDevice[*]}")
+  local ip6Device=$(IFS=,; echo "${list_ip6Device[*]}")
+  local gateway=$(IFS=,; echo "${list_gateway[*]}")
+  [[ $gateway ]] && local gatewayDevice="$gateway" || local gatewayDevice="${YELLOW}Disconnect${RESET}"
+  [[ $ipDevice ]] && local ipAddress="$ipDevice" || local ipAddress="${YELLOW}Disconnect${RESET}"
+  [[ $macDevice ]] && local MACAddr="$macDevice" || local MACAddr="${YELLOW}Disconnect${RESET}"
+  [[ $ipPublic ]] && local publicIP="${CYAN}$ipPublic${RESET}" || local publicIP="${RED}No Internet${RESET}"
+  [[ $ip6Device ]] && local ip6Address="$ip6Device" || local ip6Address="${YELLOW}Disconnect${RESET}"
+  echo "=================================="
+  echo "|            IP Info             |"
+  echo "=================================="
+  echo " IP Public    : $publicIP"
+  echo " Gateway      : $gatewayDevice"
+  echo " IPv4 Address : $ipAddress"
+  echo " IPv6 Address : $ip6Address"
+  echo " MAC Address  : $MACAddr"
+  echo "=================================="
+}
+
+function getip(){
+  [[ ! $(command -v curl 2>/dev/null) ]] && _checkingPackage -i curl -p curl
+  function _getip_usage(){
+    echo "Usage : getip [options] <domain>";
+    echo "------------------------------------------------"
+    echo "    -h        Show this message"
+    echo "    -l        Use localhost"
+    echo "    -s        Use server"
+  }
+  local server=false lokal=false
+  while getopts "lsh" opt; do
+    case $opt in
+      "l") lokal=true; break;;
+      "s") server=true; break;;
+      "h" | *) _getip_usage; break;;
+      \?) _HandleWarn "Invalid option"; break;;
+    esac
+  done
+  domain='^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$'
+  [[ -z $1 || $1 =~ $domain ]] && _getip_usage && return 1
+  local net=false
+  [[ $(curl -s -I www.f-droid.org) ]] && net=true
+  if [[ $net ]]; then
+    if $lokal; then
+      shift
+      [[ ! $(command -v dig 2>/dev/null) ]] && _checkingPackage -i dnsutils -p dig
+      for i in "$@"; do
+        local execute=$(dig $i | awk '/^;; ANSWER SECTION:/{flag=1; next} /^;; /{flag=0} flag{print $NF}' | tr '\n' ',' | sed 's/,,$//' | sed 's/,/, /g')
+        [[ $execute == "0.0.0.0" || $execute == "127.0.0.1" ]] && echo " - ${RED}$i${RESET} : Error Access or Blocked by Internal" || echo " - ${GREEN}$i${RESET} : $execute"
+      done
+    fi
+    if $server; then
+      shift
+      echo "$_comingSoon"
+    fi
+  fi
+}
+
+function netChange(){
+  if ! $_thisWin; then
+    _HandleWarn "$_notSupport" && return 1
+  fi
+  local interface=$(ip route list match 0 table all scope global | grep "via" | awk '{for (i=1; i<=NF; i++) if ($i == "dev") print $(i+1)}')
+  local wlan= lan=
+  for intf in $interface; do
+    if [[ $intf =~ '^(wlo|wlan|wifi|wlp0s|wlp1s|wlp2s|wlp3s|wlp4s|ath)[0-9]+$' ]]; then
+        [[ -z $wlan ]] && wlan=$intf
+    elif [[ $intf =~ '^(en|eth|eno|ens|enp)[0-9]+$' ]]; then
+        [[ -z $lan ]] && lan=$intf
+    fi
+  done
+  local psCheck=$(powershell.exe /c ipconfig)
+  for checkInterface in "Ethernet adapter Ethernet:" "Wireless LAN adapter WiFi:"; do
+    local checking=$(grep -A3 -e "$checkInterface" <<< "$psCheck" | grep -o 'Media disconnected')
+    [[ $checkInterface == *Ethernet* && -z $checking ]] && local wire="LAN" || local wire=""
+    [[ $checkInterface == *Wireless* && -z $checking ]] && local wired="WLAN" || local wired=""
+  done
+  PS3=$(_HandleCustom ${CYAN} "Change:" "")
+  if [[ -z $wire && -z $wired ]]; then
+    _HandleError "No Interfaces"
+    return 1
+  fi
+  select opt in $wire $wired Cancel; do
+    case $opt in
+      WLAN ) local device="Wifi"; break;;
+      LAN ) local device="Ethernet"; break;;
+      Cancel ) return 0; break;;
+      * ) _HandleWarn "Selected is invalid!"; continue;;
+    esac
+  done
+  PS3=$(_HandleCustom ${CYAN} "Change:" "")
+  select opt in IP DNS Cancel; do
+    case $opt in
+      IP ) local nextOPT="ip"; break;;
+      DNS ) local nextOPT="dns"; break;;
+      Cancel ) return 0; break;;
+      * ) _HandleWarn "Selected is invalid!"; continue;;
+    esac
+  done
+  PS3=$(_HandleCustom ${CYAN} "Change:" "")
+  select opt in DHCP STATIC Cancel; do
+    case $opt in
+      DHCP ) local nextTYPE="dhcp"; break;;
+      STATIC ) local nextTYPE="static"; break;;
+      Cancel ) return 0; break;;
+      * ) _HandleWarn "Selected is invalid!"; continue;;
+    esac
+  done 
+  if [[ $nextTYPE == "static" && $nextOPT == "ip" ]]; then
+    local defaultWlanIP=$(ip a show dev $wlan 2>/dev/null | awk '/inet / {print $2}' | cut -d '/' -f 1)
+    local defaultLanIP=$(ip a show dev $lan 2>/dev/null | awk '/inet / {print $2}' | cut -d '/' -f 1)
+    local defaultWlanGw=$(ip route list match 0 table all scope global | grep "via.*$wlan" | awk '{for (i=1; i<=NF; i++) if ($i == "via") print $(i+1)}')
+    local defaultLanGw=$(ip route list match 0 table all scope global | grep "via.*$lan" | awk '{for (i=1; i<=NF; i++) if ($i == "via") print $(i+1)}')
+    echo -ne "${CYAN}"IP Address: "${RESET}"
+    read __IP_ADDRESS
+    if [[ ! $__IP_ADDRESS =~ '^([0-9]{1,3}\.){3}[0-9]{1,3}$' && -n $__IP_ADDRESS ]]; then 
+      _HandleError "Invalid IP Address"
+      return 1
+    fi
+    if [[ -z $__IP_ADDRESS ]]; then
+      [[ $device == "Wifi" ]] && local _ipAddr=$defaultWlanIP
+      [[ $device == "Ethernet" ]] && local _ipAddr=$defaultLanIP
+    else
+      [[ $device == "Wifi" ]] && local _ipAddr=$__IP_ADDRESS
+      [[ $device == "Ethernet" ]] && local _ipAddr=$__IP_ADDRESS
+    fi
+    echo -ne "${CYAN}"Subnet: "${RESET}"
+    read __NETMASK
+    if [[ ! $__NETMASK =~ '^([0-9]{1,3}\.){3}[0-9]{1,3}$' && -n $__NETMASK ]]; then
+      _HandleError "Invalid Subnet Mask"
+      return 1
+    fi
+    [[ -z $__NETMASK ]] && local _netmask="255.255.255.0" || local _netmask=$__NETMASK
+    echo -ne "${CYAN}"Gateway: "${RESET}"
+    read __GATEWAY
+    if [[ ! $__GATEWAY =~ '^([0-9]{1,3}\.){3}[0-9]{1,3}$' && -n $__GATEWAY ]]; then
+      _HandleError "Invalid Gateway"
+      return 1
+    fi
+    if [[ -z $__GATEWAY ]]; then
+      [[ $device == "Wifi" ]] && local _gateway=$defaultWlanGw
+      [[ $device == "Ethernet" ]] && local _gateway=$defaultLanGw
+    else
+      [[ $device == "Wifi" ]] && local _gateway=$__GATEWAY
+      [[ $device == "Ethernet" ]] && local _gateway=$__GATEWAY
+    fi
+    _HandleStart "Gateway: $_gateway | IP: $_ipAddr | Subnet: $_netmask"
+    local changeStatis=$(powershell.exe /c "Start-Process powershell \
+      -verb RunAs -ArgumentList 'netsh interface ipv4 set address \
+      name=$device static $_ipAddr $_netmask $_gateway'")
+    [[ $? -eq 0 ]] && _HandleResult "Complete change IP Configuration" && return 1 || \
+      _HandleError "Failed change IP Configuration" && return 1
+  fi
+  if [[ $nextTYPE == "dhcp" && $nextOPT == "ip" ]]; then
+    _HandleStart "Settings up IP DHCP"
+    local changeDHCP=$(powershell.exe /c "Start-Process powershell \
+    -verb RunAs -ArgumentList 'netsh interface ipv4 set address \
+    name=$device dhcp'")
+    [[ $? -eq 0 ]] && _HandleResult "Complete DHCP Setup" && return 1 || \
+      _HandleError "Failed change" && return 1
+  fi
+  if [[ $nextTYPE == "static" && $nextOPT == "dns" ]]; then
+    PS3=$(_HandleCustom ${CYAN} "Select DNS:" "")
+    select dns in Local Google Cloudflare OpenDNS Adguard Quad9 Cancel; do
+      case $dns in
+        Local ) local dnsName="Local DNS" dnsOne="127.0.0.1" dnsTwo="127.0.1.1"; break;;
+        Google ) local dnsName="Google DNS" dnsOne="8.8.8.8" dnsTwo="8.8.4.4"; break;;
+        Cloudflare ) local dnsName="Cloudflare DNS" dnsOne="1.1.1.1" dnsTwo="1.0.0.1"; break;;
+        OpenDNS ) local dnsName="OpenDNS" dnsOne="208.67.222.222" dnsTwo="208.67.220.220"; break;;
+        AdGuard ) local dnsName="Adguard DNS" dnsOne="94.140.14.14" dnsTwo="94.140.15.15"; break;;
+        Quad9 ) local dnsName="Quad9 DNS" dnsOne="9.9.9.9" dnsTwo="149.112.112.112"; break;;
+        Cancel ) return 0;break;;
+        * ) _HandleWarn "Selected is invalid!"; continue;;
+      esac
+    done
+    _HandleStart "Setting up DNS $dnsName"
+    local changeDNSSTATIC=$(powershell.exe /c "Start-Process \
+      powershell -verb RunAs -ArgumentList 'netsh interface \
+      ipv4 set dns name=$device static $dnsOne; \
+      netsh interface ipv4 add dns name=$device $dnsTwo index=2'")
+    [[ $? -eq 0 ]] && _HandleResult "Complete DNS Setup" && return 1 || \
+      _HandleError "Failed change" && return 1
+  fi
+  if [[ $nextTYPE == "dhcp" && $nextOPT == "dns" ]]; then
+    _HandleStart "Settings up DNS DHCP"
+    local changeDHCPDNS=$(powershell.exe /c "Start-Process \
+      powershell -verb RunAs -ArgumentList \
+      'netsh interface ipv4 set dns name=$device dhcp'")
+    [[ $? -eq 0 ]] && _HandleResult "Complete DHCP Setup" && return 1 || \
+      _HandleError "Failed change" && return 1
+  fi
+}
+
+function proxyConnect(){
+  [[ $_systemType != "windows" ]] && _HandleError $_notSupport && return 1
+  local lan='localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*'
+  local regexPort='^(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5]?[0-9]{1,4})$'
+  local regexIp='^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+  local regexProt='^(socks|http|https|ftp)$'
+  local regPath="HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+  function ___PROXY___CHANGE____(){
+    powershell.exe /c "& {
+      Set-ItemProperty -path '$regPath' -name 'ProxyServer' -type 'String' -value "$1"
+      Set-ItemProperty -path '$regPath' -name 'ProxyOverride' -type 'String' -value '$lan'
+      Set-ItemProperty -path '$regPath' -name 'ProxyEnable' -type 'DWord' -value '1'
+    }"
+  }
+  function ___PROXY___RESET____(){
+    powershell.exe /c "& {
+      Set-ItemProperty -path '$regPath' -name 'ProxyServer' -type 'String' -value ''
+      Set-ItemProperty -path '$regPath' -name 'ProxyOverride' -type 'String' -value ''
+      Set-ItemProperty -path '$regPath' -name 'ProxyEnable' -type 'DWord' -value '0'
+    }"
+  }
+  function ___PROXY___TOGGLE____(){
+    # ON = 1 & OFF = 0
+    powershell.exe /c "& {
+      Set-ItemProperty -path '$regPath' -name 'ProxyEnable' -type 'DWord' -value '$1'
+    }"
+  }
+  function _proxy_connect_usage(){
+    echo "Usage : proxyConnect [options] <domain>";
+    echo "------------------------------------------------"
+    echo "    -a        Set your own proxy"
+    echo "    -d        Disable proxy"
+    echo "    -e        Enable proxy"
+    echo "    -h        Show this message"
+    echo "    -p        Change port (127.0.0.1)"
+    echo "    -r        Reset proxy"
+    echo "    -s        Change socks 1080 proxy"
+  }
+  while getopts ":a:p:dersh" opt; do
+    case $opt in
+      a ) local inputPROT=$(echo "$OPTARG" | cut -d "=" -f 1)
+          local inputIP=$(echo "$OPTARG" | cut -d ":" -f 1 | cut -d "=" -f 2)
+          local inputPORT=$(echo "$OPTARG" | cut -d ":" -f 2)
+          if [[ ! $inputPROT =~ $regexProt ]]; then _HandleError "Invalid PROTOCOL - '$inputPROT'" && return 1; fi
+          if [[ ! $inputPORT =~ $regexPort ]]; then _HandleError "Invalid PORT - '$inputPORT'" && return 1; fi
+          if [[ ! $inputIP =~ $regexIp ]]; then _HandleError "Invalid IP - '$inputIP'" && return 1; fi
+          _HandleStart "Change proxy to '$OPTARG'"
+          ___PROXY___CHANGE____ "$OPTARG"
+          [[ $? -eq 0 ]] && _HandleResult "Success change proxy" || _HandleError "Failed change proxy"
+          break;;
+      d ) _HandleStart "Disable proxy"
+          ___PROXY___TOGGLE____ 0
+          [[ $? -eq 0 ]] && _HandleResult "Success disable proxy" || _HandleError "Failed disable proxy"
+          break;;
+      e ) _HandleStart "Enable proxy"
+          ___PROXY___TOGGLE____ 1
+          [[ $? -eq 0 ]] && _HandleResult "Success enable proxy" || _HandleError "Failed enable proxy"
+          break;;
+      p ) [[ ! $OPTARG =~ $regexPort ]] && _HandleError "Allow port only 1 - 65535" && return 1 && break
+          _HandleStart "Change proxy to '127.0.0.1:$OPTARG'"
+          ___PROXY___CHANGE____ "socks=127.0.0.1:$OPTARG"
+          [[ $? -eq 0 ]] && _HandleResult "Success change proxy" || _HandleError "Failed change proxy"
+          break;;
+      r ) _HandleStart "Reset proxy to default"
+          ___PROXY___RESET____
+          [[ $? -eq 0 ]] && _HandleResult "Success change proxy" || _HandleError "Failed change proxy"
+          break;;
+      s ) _HandleStart "Change proxy to 127.0.0.1:1080"
+          ___PROXY___CHANGE____ "socks=127.0.0.1:1080"
+          [[ $? -eq 0 ]] && _HandleResult "Success change proxy" || _HandleError "Failed change proxy"
+          break;;
+      h ) _proxy_connect_usage; break;;
+      : ) _HandleError "Option -$OPTARG requires an argument"; break;;
+      \?) _HandleWarn "Invalid option -$OPTARG"; break;;
+    esac
+  done
+  [[ $# -eq 0 ]] && _proxy_connect_usage; return 0
+}
+
+function sshConnect(){
+  [[ ! $(command -v ssh 2>/dev/null) ]] && _checkingPackage -i openssh -p ssh
+  file_config="$HOME/.sshconnectrc"
+  [[ ! -f $file_config ]] && touch $file_config
+  function ssh_connect_usage() {
+    echo "Usage: sshConnect [options]"
+    echo ""
+    echo "Options :"
+    echo "------------------------------------------------"
+    echo "    -a ACCOUNT  Add ssh account"
+    echo "    -c          Connect ssh account"
+    echo "    -d          Delete ssh account"
+    echo "    -h          Show this message"
+    echo "    -k KEY      Add public key"
+    echo "    -K          Show default public key"
+    echo "    -s          Show all ssh account"
+  }
+  function check_ssh_connect(){
+    [[ ! $(cat $file_config) ]] && _HandleError "Account list is empty" && return 1 || return 0
+  }
+  [[ $# -eq 0 ]] && ssh_connect_usage && return 0
+  while getopts ":a:k:Ksdch" opt; do
+    case $opt in
+      a ) [[ $OPTARG =~ '^[^@]+@[^@]+$' ]] && echo $OPTARG >> $file_config 2>/dev/null || _HandleError "Input must be user@hostname only"
+          [[ $? -eq 0 ]] && _HandleResult "Added $OPTARG"
+          break;;
+      d )
+        check_ssh_connect
+        [[ $? -ne 0 ]] && return 1
+        declare -A options=()
+        while read -r line; do
+          options["$line"]=$line
+        done < $file_config
+        local PS3=$(_HandleCustom ${CYAN} "Choose account:" " ")
+        select option in "${options[@]}"; do
+          sed -i "/$option/d" $file_config
+          [[ $(grep -q $option $file_config) ]] && _HandleError "Failed to delete account $option" && break
+          _HandleResult "Account deleted" && break
+        done;;
+      s )
+        check_ssh_connect
+        [[ $? -ne 0 ]] && return 1
+        _HandleCustom ${CYAN} "Show all account :" "\n" && cat $file_config && break;;
+      k )
+        [[ ! -d "$HOME/.ssh" ]] && mkdir -p $HOME/.ssh
+        [[ ! -f "$HOME/.ssh/authorized_keys" ]] && touch $HOME/.ssh/authorized_keys
+        ssh_regex='^(ssh-ed25519|ssh-rsa)\s+[A-Za-z0-9+/]+[=]{0,2}\s+[A-Za-z0-9@.-]+$'
+        [[ ! $OPTARG =~ $ssh_regex ]] && echo $OPTARG >> $HOME/.ssh/authorized_keys || _HandleError "SSH Key is not valid"
+        [[ $? -eq 0 ]] && _HandleResult "Added key $OPTARG"
+        break;;
+      K )
+        local choosed=("rsa" "ed25519" "Cancel")
+        local PS3=$(_HandleCustom ${CYAN} "Choose cryptograph?" "")
+        select cryptograph in "${choosed[@]}"; do
+          case $cryptograph in
+            rsa ) [[ ! -f "$HOME/.ssh/id_rsa.pub" || ! -f "$HOME/.ssh/id_rsa" ]] && \
+              ssh-keygen -t rsa -b 4096 -o -a 100 && cat "$HOME/.ssh/id_rsa.pub" || \
+              local rsaPub=$(cat $HOME/.ssh/id_rsa.pub) && _HandleCustom ${GREEN} "Key: " "$rsaPub"
+              break;;
+            ed25519 ) [[ ! -f "$HOME/.ssh/id_ed25519.pub" || ! -f "$HOME/.ssh/id_ed25519" ]] && \
+              ssh-keygen -t ed25519 -a 100 && cat $HOME/.ssh/id_ed25519.pub || \
+              local edPub=$(cat $HOME/.ssh/id_ed25519.pub) && _HandleCustom ${GREEN} "Key: " "$edPub"
+              break;;
+            Cancel ) return 1; break;;
+          esac
+        done;;
+      c )
+        check_ssh_connect
+        [[ $? -ne 0 ]] && return 1
+        function check() {
+          local port=$1
+          if [[ ! $port =~ '^[0-9]+$' ]]; then
+            _HandleError "Invalid input!"
+            return 1
+          fi
+          if [[ $port -lt 1 || $port -gt 65535 ]]; then
+            _HandleError "Only range 1 - 65535"
+            return 1
+          fi
+          [[ $? -ne 0 ]] && _HandleError "Invalid port" && return 1
+        }
+        declare -A options=()
+        while read -r line; do
+          options["$line"]=$line
+        done < $file_config
+        [[ $(cat $file_config) ]] && options["Cancel"]="Cancel" || return 1
+        local PS3=$(_HandleCustom ${CYAN} "Choose account:" "")
+        select option in "${options[@]}"; do
+          [[ $option == "Cancel" ]] && return 0
+          if [[ -z $option || ! $option ]]; then
+            _HandleError "Invalid input!"
+            continue
+          else
+            local account_ssh=${options["$option"]}
+            break
+          fi
+        done
+        echo -n "${CYAN}Custom Port${RESET} [22]: "
+        read custom_port
+        if [[ -n $custom_port ]]; then
+          check $custom_port
+          [[ $? -ne 0 ]] && return 1 && break
         fi
-        sudo filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
-    fi
-    filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
-}
-
-function troot() {
-    if [[ $system != 'termux' ]]; then
-        echo "$not_support"
-        return 1
-    fi
-    if ! which proot-distro &>/dev/null; then
-        echo "proot-distro is not installed. Installing now..."
-        inocon proot-distro &>/dev/null
-        return 1
-    fi
-
-    function usage() {
-        echo "Usage: troot [options] <select>"
-        echo ""
-        echo "Options:"
-        echo "------------------------------------------------"
-        echo "    -h       Show this help message"
-        echo "    -i       Install Distro"
-        echo "    -L       List distro"
-        echo "    -l       Login to distro"
-        return 1
-    }
-    while getopts ":L:i:l:h" opt; do
-        case $opt in
-        L)
-            proot-distro list
-            break
-            ;;
-        i)
-            proot-distro install "$OPTARG"
-            break
-            ;;
-        l)
-            proot-distro login "$OPTARG"
-            break
-            ;;
-        h) usage ;;
-        \?)
-            echo "Invalid option -$OPTARG" >&2
-            usage
-            ;;
-        :)
-            echo "Option -$OPTARG requires an distro name." >&2
-            break
-            return 1
-            ;;
-        esac
-    done
-}
-
-function giit() {
-    if ! which git &>/dev/null; then
-        echo "Git is not installed"
-        echo "Installing Git..."
-        install git -y
-        return 1
-    fi
-    function usage() {
-        echo "Usage: giit [options]"
-        echo ""
-        echo "Options:"
-        echo "------------------------------------------------"
-        echo "    -h                Show this message"
-        echo "    -i                Git Ignore Manager"
-        echo "    -m <TARGET DIR>   Make folder a working directory for this git server"
-        echo "    -S                Make current directory for Git server"
-    }
-    if [ $# -eq 0 ]; then
-        usage
-        return 1
-    fi
-    while getopts ":p:s:m:iSh" opt; do
-        case $opt in
-        p)
-            if [[ -n $OPTARG ]]; then
-                git add . && git commit -m "$OPTARG" && git push
-            fi
-            break
-            ;;
-        m)
-            if [[ -d ./hooks ]]; then
-                if [[ ! -f ./hooks/post-receive ]]; then
-                    touch ./hooks/post-receive
-                    chmod +x ./hooks/post-receive
-                fi
-                if [[ -z $OPTARG ]]; then
-                    echo "Cancel creating work directory!"
-                    return 1
-                fi
-                if [[ ! -d $OPTARG ]]; then
-                    mkdir -p $OPTARG
-                fi
-                echo -ne "#!/bin/sh\nGIT_WORK_TREE=$OPTARG git checkout -f" >>./hooks/post-receive
-                echo "Success make directory to $OPTARG"
-            else
-                echo "Error: Only git server directory can use"
-                return 1
-            fi
-            break
-            ;;
-        S)
-            git init --bare
-            echo "Success create git server"
-            echo -ne "Do you want create working directory [y/N]? "
-            read opt
-            case $opt in
-            [yY])
-                if [[ ! -f ./hooks/post-receive ]]; then
-                    touch ./hooks/post-receive
-                    chmod +x ./hooks/post-receive
-                fi
-                echo -ne "Where? "
-                read inhere
-                if [[ -z $inhere ]]; then
-                    echo "Cancel creating work directory!"
-                    return 1
-                fi
-                if [[ ! -d $inhere ]]; then
-                    mkdir -p $inhere
-                fi
-                echo -ne "#!/bin/sh\nGIT_WORK_TREE=$inhere git checkout -f" >>./hooks/post-receive
-                echo "Success make directory to $inhere"
-                break
-                ;;
-            [nN] | *)
-                return 1
-                ;;
-            esac
-            break
-            ;;
-        i)
-            if [[ ! -d ./.git ]]; then
-                echo "Only support git folder"
-                return 1
-            fi
-            if [[ ! -f .gitignore ]]; then
-                touch .gitignore
-            fi
-            PS3="Select option: "
-            select act in Add Show Delete Update; do
-                case $act in
-                Add)
-                    echo -ne "Input ignore for: "
-                    read ign
-                    echo $ign >>.gitignore
-                    break
-                    ;;
-                Show) cat .gitignore ;;
-                Delete)
-                    PS3="Select for delete: "
-                    select del in $(cat .gitignore); do
-                        sed -i "/$del/d" .gitignore
-                    done
-                    ;;
-                *) echo "Error: Invalid option" ;;
-                esac
-            done
-            break
-            ;;
-        h)
-            usage
-            break
-            ;;
-        \?)
-            echo "Invalid option -$OPTARG" >&2
-            break
-            return 1
-            ;;
-        :)
-            echo "Option -$OPTARG requires an argument." >&2
-            break
-            return 1
-            ;;
-        esac
-    done
-}
-
-function ttmux() {
-    if [[ $system != 'termux' ]]; then
-        echo "$not_support"
-        return 1
-    fi
-    function usage() {
-        echo "Usage: ttmux [options]"
-        echo ""
-        echo "------------------------------------------------"
-        echo "Options:"
-        echo "    -b FILENAME   Create autorun script on boot"
-        echo "    -E FILENAME   Edit autorun script"
-        echo "    -B            Backup Termux"
-        echo "    -t            Restore Termux"
-        echo "    -g            Install game-repo"
-        echo "    -h            Show this help message"
-        echo "    -R            Change repo"
-        echo "    -r            Install root-repo"
-        echo "    -S            Install science-repo"
-        echo "    -s            Setup storage on termux"
-        echo "    -x            Install x11-repo"
-    }
-    if [[ ! -d ~/.termux/boot/ ]]; then
-        mkdir -p ~/.termux/boot/
-    fi
-    while getopts ":b:E:RshgSrxBt" opt; do
-        case $opt in
-        b)
-            nano mkdir -p ~/.termux/boot/$OPTARG
-            break
-            ;;
-        E)
-            nano ~/.termux/boot/$OPTARG
-            break
-            ;;
-        R)
-            termux-change-repo
-            break
-            ;;
-        s)
-            termux-setup-storage
-            break
-            ;;
-        g)
-            install game-repo
-            break
-            ;;
-        S)
-            install science-repo
-            break
-            ;;
-        r)
-            install root-repo
-            break
-            ;;
-        x)
-            install x11-repo
-            break
-            ;;
-        B)
-            if [[ -f /sdcard/termux-backup.tar.gz ]]; then
-                echo "Do you want replace termux backup [y/N]? "
-                read response
-                case response in
-                y | Y)
-                    tar -zcf /sdcard/termux-backup.tar.gz -C /data/data/com.termux/files ./home ./usr
-                    break
-                    ;;
-                n | N | *) return 1 ;;
-                esac
-            fi
-            tar -zcf /sdcard/termux-backup.tar.gz -C /data/data/com.termux/files ./home ./usr
-            break
-            ;;
-        t)
-            if [[ ! -f /sdcard/termux-backup.tar.gz ]]; then
-                echo "Make sure backup with directory and filename like this '/sdcard/termux-backup.tar.gz'"
-                return 1
-            fi
-            tar -zxf /sdcard/termux-backup.tar.gz -C /data/data/com.termux/files --recursive-unlink --preserve-permissions
-            break
-            ;;
-        h)
-            usage
-            break
-            ;;
-        \?)
-            if [[ -n $OPTARG ]]; then
-                echo "Invalid option $OPTARG" >&2
-            else
-                echo "Invalid option" >&2
-            fi
-            break
-            return 1
-            ;;
-        :)
-            if [[ -n $OPTARG ]]; then
-                echo "Option $OPTARG requires an FILENAME" >&2
-            fi
-            break
-            return 1
-            ;;
-        esac
-    done
-    if [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-}
-
-function download() {
-    function usage() {
-        echo "Usage  : download [-p] <url>"
-        echo ""
-        echo "------------------------------------------------"
-        echo "Options:"
-        echo "    -h         Show this help message"
-        echo "    -p         Personal download directory"
-        echo ""
-        echo ""
-        echo ""
-        echo "Default: download <url> with current directory"
-    }
-    while getopts ":p:" opt; do
-        case $opt in
-        p)
-            getname=$(basename $OPTARG)
-            filename=$(echo ${getname%%\?*})
-            if [[ $system == 'termux' ]]; then
-                dl_dirs="/sdcard/Download/$filename"
-                echo "Preparing..."
-                wget -q --show-progress -O $dl_dirs $OPTARG
-            elif [[ $system == 'windows' ]]; then
-                finduser=$(powershell.exe /c "[System.Environment]::UserName")
-                user=$(echo "$finduser" | tr -d '\r')
-                dl_dirs="/mnt/c/Users/${user}/Downloads"
-                echo "Preparing..."
-                wget -O -q --show-progress $dl_dirs/$filename $OPTARG
-            elif [[ $system == 'linux' ]]; then
-                user=$(whoami)
-                dl_dirs="/home/${user}/Downloads"
-                echo "Preparing..."
-                wget -O -q --show-progress $dl_dirs/$filename $OPTARG
-            else
-                echo $not_support
-                return 1
-            fi
-            ;;
-        \?)
-            echo "Invalid option $OPTARG" >&2
-            break
-            ;;
-        :)
-            echo "Option $OPTARG requires an URL" >&2
-            break
-            ;;
-        esac
-    done
-    if [[ $# -eq 1 && $# != 'p' ]]; then
-        echo "Preparing..."
-        wget -q --show-progress $1
-        return 1
-    elif [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-}
-
-function colormap() {
-  for i in {0..255}; do print -Pn "%K{$i}  %k%F{$i}${(l:3::0:)i}%f " ${${(M)$((i%6)):#3}:+$'\n'}; done
-}
-
-########################### END REGULAR ###########################
-################### CONVERT - COMPRESS - MERGER ###################
-
-function cimage(){
-    if ! which convert &>/dev/null || ! which cwebp &>/dev/null || ! which potrace &>/dev/null; then
-        echo "converter image service not found. Installing now..."
-        inocon imagemagick libwebp potrace &>/dev/null
-        if which convert &>/dev/null || which cwebp &>/dev/null || which potrace &>/dev/null; then
-            echo "Success installing converter image service..."
-            echo "Run again!"
-        else
-            echo "Failed installing converter image service..."
+        echo -n "${CYAN}Dynamic Port${RESET} [default]: "
+        read local_port
+        if [[ -n $local_port ]]; then
+          check $local_port
+          [[ $? -ne 0 ]] && return 1 && break
         fi
-        return 1
+        [[ -z $custom_port ]] && local port="22" || local port="$custom_port"
+        [[ -z $local_port ]] && local socks="" || local socks="-D 127.0.0.1:$local_port"
+        local chiper="Ciphers=chacha20-poly1305@openssh.com"
+        local keax="KexAlgorithms=curve25519-sha256@libssh.org"
+        local macs="MACs=hmac-sha2-256-etm@openssh.com"
+        local hka="HostKeyAlgorithms=ssh-ed25519"
+        ssh $account_ssh -p $port $socks -o $chiper -o $keax -o $macs -o $hka 2>/dev/null
+        [[ $? -ne 0 ]] && _HandleError "Unable connect to server"
+        break;;
+      h ) ssh_connect_usage && break;;
+      \? ) _HandleError "Invalid option: -$OPTARG"; break;;
+      : ) _HandleError "Option -$OPTARG requires an ssh account"; break;;
+      *) _HandleWarn "Invalid command"; break;;
+    esac
+  done
+}
+
+function restartDNS(){
+  if $_thisTermux; then
+    _HandleWarn "$_notSupport" && return 1
+  elif $_thisWin; then
+    _HandleStart "Restart DNS" && powershell.exe /c "ipconfig /flushdns" && return 1
+  else
+    for ___SYSTEMS___ in "ubuntu" "rhel" "fedora" "centos" "opensuse"; do
+      [[ $(command -v systemd-resolve) && "$_sysName" == "$___SYSTEMS___[@]" ]] && sudo systemd-resolve --flush-caches && return 1
+      break
+    done
+  fi
+}
+
+function speeds(){
+  if $_thisTermux; then
+    [[ ! $(command -v speedtest-go) ]] && \
+      _checkingPackage -i speedtest-go -p speedtest-go || speedtest-go
+  else
+    [[ ! $(command -v speedtest) ]] && \
+    _checkingPackage -i speedtest-cli -p speedtest || speedtest
+  fi
+}
+
+function fileBrowser(){
+  [[ ! $(command -v curl 2>/dev/null) ]] && _checkingPackage -i curl -p curl
+  [[ ! $(command -v bash 2>/dev/null) ]] && _checkingPackage -i bash -p bash
+  if [[ ! $(command -v filebrowser 2>/dev/null) ]]; then
+    _HandleStart "Install filebrowser"
+    local getFileBrowser=$(curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash)
+    [[ $? -eq 0 ]] && _HandleResult "Success installing filebrowser" || _HandleError $getFileBrowser
+  fi
+  function _file_browser_usage(){
+    echo "Usage: fileBrowser [options]"
+    echo ""
+    echo "Options :"
+    echo "------------------------------------------------"
+    echo "    -a IP             Set the IP address to listen [Default: 0.0.0.0]"
+    echo "    -d DIR            Set the directory to serve [Default: '$HOME']"
+    echo "    -h                Show this message"
+    echo "    -p NUMBER         Set the port number [Default: 8080]"
+  }
+  while getopts ":p:d:a:h" option; do
+    case "$option" in
+      a)  addr="$OPTARG" ;;
+      p)  port="$OPTARG" ;;
+      d)  dirs="$OPTARG" ;;
+      h)  _file_browser_usage; return 1;;
+      \?) _HandleWarn "Invalid option: -$OPTARG"; return 1;;
+    esac
+  done
+  [[ -z $addr ]] && addr="0.0.0.0"
+  [[ -z $port ]] && port="8080"
+  [[ -z $dirs ]] && dirs="$HOME"
+  filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
+}
+
+########################### END NETTOOL ###########################
+############################## TOOLS ##############################
+function termux_tools(){
+  if ! $_thisTermux; then _HandleWarn "$_notSupport" && return 1; fi
+  function _termux_tools_usage(){
+    echo "Usage: termux_tools [options] <path/file>"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Options:"
+    echo "    -b DIR          Backup Termux"
+    echo "    -r FILE         Restore Termux"
+    echo "    -a FILE_NAME    Create a script on boot"
+    echo "    -s              Setup storage"
+    echo "    -c              Change repo"
+    echo "    -h              Show this message"
+    echo "    -R              Install root-repo"
+    echo "    -S              Install science-repo"
+    echo "    -G              Install game-repo"
+    echo "    -X              install X11-repo"
+  }
+  local BOOT="$HOME/.termux/boot"
+  [[ ! -d $BOOT ]] && mkdir -p $BOOT
+  while getopts ":b:r:a:scRSGXh" opt; do
+    case $opt in
+      a ) nano $BOOT/$OPTARG; break;;
+      b ) [[ ! -d $OPTARG ]] && _HandleError "Invalid directory" && return 1 && break
+          [[ ! $(command -v tar) ]] && _checkingPackage -i tar
+          _HandleStart "Backup termux"
+          local files="$OPTARG/$(date +"%Y-%m-%d_%H:%M").tar.gz"
+          local archive=$(tar -zcf $files -C /data/data/com.termux/files ./home ./usr)
+          [[ $? -eq 0 && -f $files ]] && _HandleResult "Backup success" || _HandleError "Backup failed"
+          break;;
+      r ) local checkFiles=$(tar -tf $OPTARG | grep -E '^\.\/(home|usr)\/$')
+          [[ ! -f $OPTARG || $? -ne 0 ]] && _HandleError "Invalid file" && return 1 && break
+          _HandleStart "Restoring termux data"
+          local archive=$(tar -zxf $OPTARG -C /data/data/com.termux/files --recursive-unlink --preserve-permissions)
+          [[ $? -eq 0 ]] && _HandleResult "Success restored" || _HandleError "Restore failed"
+          break;;
+      s ) termux-setup-storage; break;;
+      c ) termux-change-repo; break;;
+      R ) install root-repo; break;;
+      S ) install science-repo; break;;
+      G ) install game-repo; break;;
+      X ) install x11-repo; break;;
+      \?) _HandleWarn "Invalid option" >&2; break;;
+      : ) _HandleError "Option '-$OPTARG' requires a argument" >&2; break;;
+    esac
+  done
+}
+
+function dl_tools(){
+  [[ ! $(command -v wget) ]] && _checkingPackage -i wget
+  local directoryDownloads=""
+  if $_thisTermux; then
+    local directoryDownloads="/sdcard/Download"
+    if [[ ! $(command -v yt-dlp) ]]; then
+      _HandleStart "Installing youtube-dl"
+      local process=$(wget -qq https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O $PREFIX/bin/yt-dlp && chmod a+rx $PREFIX/bin/yt-dlp)
+      [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
     fi
-    local _image="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
+  elif $_thisWin; then
+    local getUser=$(powershell.exe /c "[System.Environment]::UserName")
+    local User=$(echo $getUser | tr -d '\r')
+    local directoryDownloads="/mnt/c/Users/${User}/Downloads"
+    if [[ ! $(command -v yt-dlp) ]]; then
+      _HandleStart "Installing youtube-dl"
+      local process=$(sudo wget -qq https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/bin/yt-dlp && sudo chmod a+rx /usr/bin/yt-dlp)
+      [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
+    fi
+  elif $_thisLinux; then
+    if [[ ! -d "$HOME/Downloads" ]]; then
+      mkdir -p "$HOME/Downloads"
+      local directoryDownloads="$HOME/Downloads"
+    else
+      local directoryDownloads="$HOME/Downloads"
+    fi
+    if [[ ! $(command -v yt-dlp) ]]; then
+      _HandleStart "Installing youtube-dl"
+      local process=$(sudo wget -qq https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/bin/yt-dlp && sudo chmod a+rx /usr/bin/yt-dlp)
+      [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
+    fi
+  else
+    _HandleWarn "$_notSupport" && return 1
+  fi
+
+  function _dl_tools_usage(){
+    echo "Usage  : dl_tools [option] URL"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Options:"
+    echo "    -d      Custom directory"
+    echo "    -y      Use yt-dl program"
+    echo "    -h      Show this message"
+  }
+  local custom=""
+  local youtube=false
+  while getopts ":d:yh" opt; do
+    case $opt in
+      d ) custom=$OPTARG;;
+      y ) youtube=true;;
+      : ) _HandleError "Option '-$OPTARG' requires a argument" >&2; break;;
+    esac
+  done
+  [[ -n $custom && ! -d $custom ]] && mkdir -p $custom
+  if $youtube; then
+    if [[ -z $custom ]]; then
+      _HandleStart "Downloading..."
+      yt-dlp -q --progress -P "$directoryDownloads" "$@"
+    elif [[ -n $custom ]]; then
+      _HandleStart "Downloading..."
+      yt-dlp -q --progress -P "$custom" "$@"
+    fi
+  else
+    if [[ -z $custom ]]; then
+      _HandleStart "Downloading..."
+      echo $directoryDownloads
+      wget -q --show-progress -P "$directoryDownloads" "$@"
+    elif [[ -n $custom ]]; then
+      _HandleStart "Downloading..."
+      wget -q --show-progress -P "$custom" "$@"
+    fi
+  fi
+}
+
+function git_tools(){
+  [[ ! $(command -v git) ]] && _checkingPackage -i git
+  function _git_tools_usage(){
+    echo "Usage: git_tools [options] <path/file>"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Options:"
+    echo "    -p        Git Pull"
+    echo "    -P        Git Push"
+    echo "    -r        Soft reset commit"
+    echo "    -R        Hard reset commit"
+    echo "    -l        Git log commit"
+    echo "    -s        Create own git server"
+    echo "    -w PATH   Working dir for git server"
+    echo "    -h        Show this message"
+  }
+  while getopts ":P:w:r:lpsh" opt; do
+    case $opt in
+      p ) git pull; break;;
+      P ) git add . && git commit -m "$OPTARG" && git push; break;;
+      s ) git init --bare && break;;
+      r ) git reset --soft $OPTARG && break;;
+      R ) git reset --hard $OPTARG && break;;
+      l ) git log --oneline && break;;
+      w ) [[ ! $OPTARG ]] && _HandleWarn "Cancel action.." && return 1
+          [[ ! -d "./branches" || ! -d "./hooks" || ! -d "./info" || ! -d "./object" || ! -d "./refs" ]] && \
+            _HandleError "GIT Server directory reqired";break
+          [[ ! -f "./hooks/post-receive" ]] && touch ./hooks/post-receive && chmod +x ./hooks/post-receive
+          [[ ! -d $OPTARG ]] && mkdir -p $OPTARG
+          _HandleStart "Add ${GREEN}post-receive${RESET}"
+          local post=$(echo -ne "#!/bin/sh\nGIT_WORK_TREE=$OPTARG git checkout -f" >> ./hooks/post-receive)
+          [[ $? -eq 0 ]] && _HandleResult "Action success" || _HandleError "Failed writing ${GREEN}post-receive${RESET}"
+          break;;
+      h ) _git_tools_usage; break;;
+      : ) _HandleError "Option -$OPTARG requires an argument" >&2; break;;
+      \? ) _HandleError "Invalid option -$OPTARG" >&2; break;;
+    esac
+  done
+}
+
+function image_tools(){
+  [[ ! $(command -v convert) ]] && _checkingPackage -i imagemagick -p convert
+  if [[ ! $(command -v cwebp) ]]; then
+    local search=$(search webp 2>/dev/null)
+    for pkg in "libwebp-tools" "webp"; do
+      if [[ $(echo $search | grep "$pkg") ]]; then
+        _HandleWarn "cweb not installed. Installing now!"
+        _HandleStart "Installing $pkg"
+        local installpkg=$(_checkingPackage -i "$pkg" -p cwebp)
+        [[ $? -eq 0 ]] && _HandleResult "Success installing $pkg" && break || \
+          _HandleError "Failed installing $pkg" && return 1 && break
+      else
+        _HandleError "$_notSupport" && return 1 && break
+      fi
+    done
+  fi
+  [[ ! $(command -v potrace) ]] && _checkingPackage -i potrace
+  local imageExtension="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
     erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
     jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
     map mef mng mrw mtv nef nrw orf otb pal palm pam pbm pcd pct \
@@ -2587,1151 +978,775 @@ function cimage(){
     psd pwp raf ras rgb rgba rgbo rgf rla rle rw2 sct sfw sgi six \
     sixel sr2 srf sun svg tga tiff tim tm2 uyvy viff vips wbmp webp \
     wmz wpg x3f xbm xc xcf xpm xv xwd yuv"
-
-    if [[ $1 == "help" || $1 == "--help" || $1 == "-h" || -z $1 ]]; then
-        echo "Usage  : cimage <input image or extension> <output image or extension>"
-        echo ""
-        echo "Support output extension : webp, jpg, jpeg, png, svg, ico"
-        echo "Example:"
-        echo "    Batch  : 'cimage png ico'        "
-        echo "             Convert all image ext 'png' to ico with default name"
-        echo ""
-        echo "    Single : 'cimage example.png ico'"
-        echo "             Convert image extension png to ico with default name"
-        echo ""
-        echo "    Single Custom : 'cimage example.png example.ico'"
-        echo "             Convert image extension png to ico with custom name"
-        echo ""
-        return 1
-    fi
-    _all=false
-    if [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
-        _all=true
-    fi
-
-    if [[ $_all == true ]]; then
-        _check_file_images=$(find ./ -maxdepth 1 -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ')
-        if [[ -z $_check_file_images ]]; then
-            echo "File does not exist"
-            return 1
-        fi
-        for file in $(find ./ -maxdepth 1 -type f -name "*.${1##*.}" -printf "%f\n" | tr '\n' ' ');
-        do
-            if ! [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
-                echo "Error: input is not supported. Run 'cimage help' for more."
-                return 1
-            fi
-            if [[ $2 =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]]; then
-                output="${file%.*}.$2"
-            else
-                echo "Error: output is not supported. Run 'cimage help' for more."
-                return 1
-            fi
-            if [[ ${output##*.} == "ico" ]]; then
-                convert -resize x16 -gravity center -crop 16x16+0+0 "$file" -flatten -colors 256 -background transparent "$output"
-            elif [[ ${output##*.} == "svg" ]]; then
-                convert "$file" "${file%.*}.ppm" >/dev/null
-                potrace -s "${file%.*}.ppm" -o "$output" >/dev/null
-                rm -f "${file%.*}.ppm"
-            elif [[ ${output##*.} == "webp" || ${output##*.} == "jpg" || ${output##*.} == "jpeg" || ${output##*.} == "png" ]]; then
-                convert "$file" "$output" >/dev/null
-            fi
-            if [[ -f $output ]]; then
-                echo "Complete convert $file to $output"
-            else
-                echo "Failed convert $file to $output"
-                break
-            fi
-        done
+  local compress=false
+  function _image_tools_usage(){
+    echo "Usage: image_tools [options] <path/file>"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Options:"
+    echo "    -c        Activate compress mode"
+    echo "    -s        source file"
+    echo "    -t        Target output file"
+    echo "                  (not working on compress mode)"
+    echo "    -h        Show this message"
+  }
+  while getopts ":s:t:ch" opt; do
+    case $opt in
+      s ) local sourceImage=$OPTARG;;
+      t ) local target=$OPTARG;;
+      c ) local compress=true;;
+      h ) _image_tools_usage; break;;
+      \?) _HandleWarn "Invalid option" >&2; return 1; break;;
+      : ) _HandleError "Option '-$OPTARG' requires" >&2; return 1; break;;
+    esac
+  done
+  [[ $# -eq 0 ]] && _image_tools_usage && return 0
+  if [[ $imageExtension =~ (^|[[:space:]])$sourceImage($|[[:space:]]) && ! $compress ]]; then
+    [[ ! $target =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]] && _HandleError "Invalid target" && return 1
+    local allImage=$(find ./ -maxdepth 1 -type f -name "*.$sourceImage" | awk -F'/' '{printf "\"%s\" ", $NF}' | sed 's/,$//')
+    [[ -z $allImage ]] && _HandleError "sourceImage image not exists" && return 1
+    for images in $allImage; do
+      local output="${images%.*}.$target"
+      _HandleStart "Convert $images to $output"
+      if [[ ${output##*.} == "ico" ]]; then
+        local convert=$(convert -resize x16 -gravity center \
+          -crop 16x16+0+0 "$iamges" -flatten -colors 256 \
+          -background transparent "$output")
+      elif [[ ${output##*.} == "svg" ]]; then
+        local convert=$(convert "$images" "${images%.*}.ppm" && potrace \
+          -s "${images%.*}.ppm" -o "$output" && rm -f "${images%.*}.ppm")
+      else
+        local convert=$(convert "$images" "$output")
+      fi
+      [[ $? -eq 0 && -f $output ]] && _HandleResult "Convert '$images' to '$output' success" && \
+        return 0 || _HandleError "Failed converting '$images'" && return 1
+      break
+    done
+  elif [[ ! $imageExtension =~ (^|[[:space:]])$sourceImage($|[[:space:]]) && ! $compress ]]; then
+    [[ ! -f $sourceImage ]] && _HandleError "sourceImage image not exists" && return 1
+    [[ $target =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]] && local output="${sourceImage%.*}.$target" || \
+      local output="$target"
+    _HandleStart "Convert $sourceImage to $output"
+    if [[ ${output##*.} == "ico" ]]; then
+      local convert=$(convert -resize x16 -gravity center \
+        -crop 16x16+0+0 "$sourceImage" -flatten -colors 256 \
+        -background transparent "$output")
+    elif [[ ${output##*.} == "svg" ]]; then
+      local convert=$(convert "$sourceImage" "${sourceImage%.*}.ppm" && potrace \
+        -s "${sourceImage%.*}.ppm" -o "$output" && rm -f "${images%.*}.ppm")
     else
-        if [[ ! -f $1 ]]; then
-            echo "File does not exist"
-            return 1
-        fi
-        if ! [[ $_image =~ (^|[[:space:]])$1($|[[:space:]]) ]]; then
-            echo "Error: input is not supported. Run 'cimage help' for more."
-            return 1
-        fi
-        if [[ $2 =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]]; then
-            output="${1%.*}.$2"
-        elif [[ -n ${2%.*} && -n ${2##*.} ]]; then
-            output="$2"
-        else
-            echo "Error: output is not supported. Run 'cimage help' for more."
-            return 1
-        fi
-        if [[ ${output##*.} == "ico" ]]; then
-            convert -resize x16 -gravity center -crop 16x16+0+0 "$1" -flatten -colors 256 -background transparent "$output"
-        elif [[ ${output##*.} == "svg" ]]; then
-            convert "$1" "${1%.*}.ppm" >/dev/null
-            potrace -s "${1%.*}.ppm" -o "$output" >/dev/null
-            rm -f "${1%.*}.ppm"
-        elif [[ ${output##*.} == "webp" || ${output##*.} == "jpg" || ${output##*.} == "jpeg" || ${output##*.} == "png" ]]; then
-            convert "$1" "$output" >/dev/null
-        fi
-        if [[ -f $output ]]; then
-            echo "Complete convert $1 to $output"
-        else
-            echo "Failed convert $1 to $output"
-            break
-        fi
+      local convert=$(convert "$sourceImage" "$output")
     fi
+    [[ $? -eq 0 && -f $output ]] && _HandleResult "Convert '$sourceImage' to '$output' success" && \
+       return 0 || _HandleError "Failed converting '$sourceImage'" && return 1
+  elif [[ $compress ]]; then
+    if [[ ! $sourceImage =~ ^(jpg|jpeg|png|gif|bmp|tiff|tif|webp|jp2)$ ]]; then
+      [[ ! -f $sourceImage ]] && _HandleError "sourceImage image not exists" && return 1
+      local nameImage=${sourceImage%.*}
+      local extImage=${sourceImage##*.}
+      local watermark="compressed"
+      local output="$nameImage-$watermark.$extImage"
+      _HandleStart "Compressing $sourceImage"
+      local processing=$(convert $sourceImage -compress Zip -quality 60 "$output")
+      [[ $? -eq 0 ]] && _HandleResult "Success compressing to '$output'" && return 0 || \
+        _HandleError "Failed compressing '$sourceImage'" && return 1
+    elif [[ $sourceImage =~ ^(jpg|jpeg|png|gif|bmp|tiff|tif|webp|jp2)$ ]]; then
+      find ./ -maxdepth 1 -type f -name "*.$sourceImage" | while IFS= read -r select; do
+        [[ -z $select || ! $select ]] && _HandleError "Source image not exists" && return 1
+        local nameImage=${select%.*}
+        local extImage=${select##*.}
+        local watermark="compressed"
+        local output="$nameImage-$watermark.$extImage"
+        echo -ne "${CYAN}Process:${RESET} Compressing ${GREEN}$select${RESET} to ${GREEN}$output${RESET} ~ "
+        local processing=$(convert $select -compress Zip -quality 60 "$output")
+        [[ $? -eq 0 && -f $output ]] && echo "${GREEN}OK${RESET}" || \
+          echo "${RED}FAILED${RESET}" && return 1
+      done
+    fi
+  fi
 }
 
-function cdocs(){
-    if ! which pandoc &>/dev/null || ! which gs &>/dev/null; then
-        echo "converter document service not installed. Installing now..."
-        inocon pandoc ghostscript &>/dev/null
-        if [[ $pm == "pkg" && $system == "termux" ]]; then
-            inocon texlive-bin &>/dev/null
-        elif [[ $pm == "pacman" ]]; then
-            inocon texlive-core &>/dev/null
-        elif [[ $pm == "dnf" || $pm == "yum" || $pm == "zypper" ]]; then
-            inocon texlive-latex &>/dev/null
-        elif [[ $pm == "apt" ]]; then
-            inocon texlive-latex-base &>/dev/null
-        elif [[ $pm == "apk" ]]; then
-            inocon texlive &>/dev/null
-        elif [[ $pm == "pkg" && $system != "termux" ]]; then
-            inocon texlive-base &>/dev/null
-        else
-            echo "$not_support"
-            return 1
-        fi
-        if which pandoc &>/dev/null && which gs &>/dev/null; then
-            echo "Success installing converter document service..."
-            echo "Run again!"
-        else
-            echo "Failed installing converter document service..."
-        fi
-        return 1
+function document_tools(){
+  [[ ! $(command -v pandoc) ]] && _checkingPackage -i pandoc
+  [[ ! $(command -v gs) ]] && _checkingPackage -i ghostscript
+  [[ ! $(command -v pdftk) ]] && _checkingPackage -i pdftk
+  [[ ! $(command -v pandoc) || ! $(command -v gs) || ! $(command -v pdftk) ]] && \
+    _HandleError "Need some dependencies, run 'documment_tools' again!" && return 1
+  local docExtension=("abw" "aw" "csv" "dbk" "djvu" "doc" "docm" "docx" \
+    "dot" "dotm" "dotx" "html" "kwd" "odt" "oxps" "pdf" "rtf" \
+    "sxw" "txt" "wps" "xls" "xlsx" "xps")
+  
+  local __merge=false __convert=fals
+  PS3="$(_HandleCustom ${CYAN} "Select:" "")"
+  while getopts ":m:f:o:q:h" opt; do
+    case $opt in
+      m ) local __merge=true && local __input="$OPTARG" ;;
+      c ) local __convert=true && local __input="$OPTARG" ;;
+      o ) local __output="$OPTARG" ;;
+      e ) local __extension="$OPTARG" ;;
+      h ) _image_tools_usage; break;;
+      \?) _HandleWarn "Invalid option" >&2; return 1; break;;
+      : ) _HandleError "Option '-$OPTARG' requires" >&2; return 1; break;;
+    esac
+  done
+  [[ $__merge && $__convert ]] && _HandleError "Only one option you can do!" && return 1
+  if [[ "${docExtension[*]}" =~ "\\b($__input)\\b" ]]; then
+    if [[ $__merge ]]; then
+      find ./ -maxdepth 1 -name "${__input##*.}" -type f | while read -r select; do
+        [[ -z $select || ! $select ]] && _HandleError "File does not exits" && return 1 && break
+        [[ -z $__output ]] && __output="$(date +"%Y-%m-%d_%H:%M-merged").pdf"
+        [[ ${__output##*.} != "pdf" ]] && _HandleError "Only extension PDF can used merge documments" && return 1 && break
+        echo -ne "${CYAN}Process:${RESET} Merge ${GREEN}$select${RESET} to ${GREEN}$__output${RESET} ~ "
+        local process=$(pdftk "$select" cat output "$__output")
+        [[ $? -eq 0 && -f $__output ]] && echo "${GREEN}OK${RESET}" && return 0 || \
+          echo "${RED}FAILED${RESET}" && return 1
+      done
+    elif [[ $__convert ]]; then
+      find ./ -maxdepth 1 -name "${__input##*.}" -type f | while read -r select; do
+        [[ -z $select || ! $select ]] && _HandleError "File does not exits" && return 1 && break
+        [[ -z $__output ]] && _HandleError "Need output option!" && return 1 && break
+        [[ ! "${docExtension[*]}" =~ "\\b($__output)\\b" ]] && local _output="${__output##*.}" || local _output="$__output"
+        echo -ne "${CYAN}Process:${RESET} Convert ${GREEN}$select${RESET} to ${GREEN}$_output${RESET} ~ "
+        local process=$(pandoc "$select" -o "${select%.*}.${_output##*.}")
+        [[ $? -eq 0 && -f $_output ]] && echo "${GREEN}OK${RESET}" && return 0 || \
+          echo "${RED}FAILED${RESET}" && return 1
+      done
     fi
-    PS3="Select action: "
-    local _docs=("abw" "aw" "csv" "dbk" "djvu" "doc" "docm" "docx" \
-        "dot" "dotm" "dotx" "html" "kwd" "odt" "oxps" "pdf" "rtf" \
-        "sxw" "txt" "wps" "xls" "xlsx" "xps")
-    local _all_files=false
-
-    function _all_docs_converter_guide_usage(){
-        echo "Usage  : cdocs [OPTION] <format>"
-        echo ""
-        echo "------------------------------------------------"
-        echo "Options:"
-        echo "    -h         Show this help message"
-        echo "    -i         Input file"
-        echo "    -f         Format extension file for output"
-        echo "    -o         Output is optional, use for rename"
-        echo ""
-    }
-
-    while getopts ":i:f:o:q:s:ah" opt; do
-        case $opt in
-            i ) input="$OPTARG";;
-            f ) format="$OPTARG";;
-            o ) output="$OPTARG";;
-            q ) quality="$OPTARG";;
-            a ) _all_files=true;;
-            h ) _all_docs_converter_guide_usage;;
-            \? | *) echo "Invalid option: -$OPTARG" >&2;;
-            : ) echo "Option -$OPTARG requires an argument." >&2;;
-        esac
-    done
-
-    if [[ -z $input || -z $format ]]; then
-        echo "Error: Missing input and format options." >&2
-        _all_docs_converter_guide_usage
-        return 1
+  else
+    [[ ! -f $__input ]] && _HandleError "No such file existed!" && return 1
+    if [[ $__merge ]]; then
+      _HandleWarn "Only can use multiple documents. Try using 'pdf'!"
+      return 0
+    elif [[ $__convert ]]; then
+      [[ -z $__output ]] && _HandleError "Need output option!" && return 1 && break
+      [[ ! "${docExtension[*]}" =~ "\\b($__output)\\b" ]] && local _output="${__output##*.}" || local _output="$__output"
+      _HandleStart "Convert $__input to $_output"
+      local process=$(pandoc "$__input" -o "${__input%.*}.$_output")
+      [[ $? -eq 0 && -f $_output ]] && _HandleResult "Convert '$__input' to '$_output' success" && \
+        return 0 || _HandleError "Failed converting '$__input'" && return 1
     fi
-    if [[ -z $output ]]; then
-        output="${input%.*}.${format##*.}"
-    fi
-    for _check_ext in "${_docs[@]}"; do
-        if [[ $format == $_check_ext ]]; then
-            _allow_proccessing=true
-            break
-        else
-            _allow_proccessing=false
-        fi
-    done
-
-    if [[ $_allow_proccessing == false ]]; then
-        echo "Your format is not support! Run '-h' for more information."
-        return 1
-    fi
-
-    if [[ $_all_files == true ]]; then
-        _get_all="${input##*.}"
-        find ./ -maxdepth 1 -name "$_get_all" -type f | while read -r file; do
-            pandoc "$file" -o "${file%.*}.${format##*.}"
-        done
-    else
-        pandoc "$input" -o "$output"
-    fi
+  fi
 }
 
-
-function cmedia(){
-    if ! which ffmpeg &>/dev/null; then
-        echo "converter media service not found. Installing now..."
-        inocon ffmpeg &>/dev/null
-        if which ffmpeg &>/dev/null; then
-            echo "Success installing converter media service..."
-            echo "Run again!"
-        else
-            echo "Failed installing converter media service..."
-        fi
-        return 1
-    fi
-    local _all_video="3g2 3gp aaf asf av1 avchd avi cavs divx dv f4v \
+function media_tools(){
+  [[ ! $(command -v ffmpeg) ]] && _checkingPackage -i ffmpeg
+  function _media_tools_usage(){
+    echo "Usage  : media_tools [OPTION] <format>"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Options:"
+    echo "    -h         Show this help message"
+    echo "    -i         Input file"
+    echo "    -f         Format extension file for output"
+    echo "    -o         Output is optional, use for rename"
+    echo "    -q         Set quality [default : medium]"
+    echo "    -s         Resize for video [comming soon]"
+    echo ""
+  }
+  local _all_video="3g2 3gp aaf asf av1 avchd avi cavs divx dv f4v \
     flv hevc m2ts m2v m4v mjpeg mkv mod mov mp4 mpeg mpeg-2 mpg mts \
     mxf ogv rm rmvb swf tod ts vob webm wmv wtv xvid"
-    local _all_audio="8svx aac ac3 aiff amb amr ape au avr caf cdda cvs \
+  local _all_audio="8svx aac ac3 aiff amb amr ape au avr caf cdda cvs \
     cvsd cvu dss dts dvms fap flac fssd gsm gsrt hcom htk ima ircam m4a \
     m4r maud mp2 mp3 nist oga ogg opus paf prc pvf ra sd2 shn sln smp snd \
     sndr sndt sou sph spx tak tta txw vms voc vox vqf w64 wav wma wv wve xa"
-
-    local input=""
-    local media=""
-    local output=""
-    local quality="medium"
-    local resize=""
-
-    function _all_media_converter_guide_usage(){
-        echo "Usage  : cmedia [OPTION] <format>"
-        echo ""
-        echo "------------------------------------------------"
-        echo "Options:"
-        echo "    -h         Show this help message"
-        echo "    -i         Input file"
-        echo "    -f         Format extension file for output"
-        echo "    -o         Output is optional, use for rename"
-        echo "    -q         Set quality [default : medium]"
-        echo "    -s         Resize for video [comming soon]"
-        echo ""
-    }
-    while getopts ":i:f:o:q:s:h" opt; do
-        case $opt in
-            i ) input="$OPTARG";;
-            f ) format="$OPTARG";;
-            o ) output="$OPTARG";;
-            q ) quality="$OPTARG";;
-            s ) resize="$OPTARG";;
-            h ) _all_media_converter_guide_usage;;
-            \? | *) echo "Invalid option: -$OPTARG" >&2;;
-            : ) echo "Option -$OPTARG requires an argument." >&2;;
-        esac
-    done
-
-    if [[ -z $input || -z $format ]]; then
-        echo "Error: Missing input and format options." >&2
-        _all_media_converter_guide_usage
-        return 1
-    fi
-    if [[ -z $output ]]; then
-        output="${input%.*}.${format##*.}"
-    fi
-
-    # Make sure if input are video and output is audio, that will nothing video on output
-    rv=""
-    local ext="${input%.*}"
-    local _output_ext="${output##*.}"
-    local _output_allow_ext="mp3 m4a opus flac"
-    if [[ $_all_video =~ (^|[[:space:]])$ext($|[[:space:]]) && $_output_allow_ext =~ (^|[[:space:]])$_output_ext($|[[:space:]]) ]]; then
-        rv="-vn"
-    fi
-
-    if [ -n "$rv" ]; then
-        ffmpeg_command="ffmpeg -i '$input' $rv"
-    else
-        ffmpeg_command="ffmpeg -i '$input'"
-    fi
-    case ${output##*.} in
-        mp3)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 9 '$output'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 7 '$output'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 5 '$output'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 2 '$output'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 0 '$output'"
-                    ;;
-            esac
-            ;;
-        m4a)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 64k '$output'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 96k '$output'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 128k '$output'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 192k '$output'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command $rv -c:a aac -b:a 256k '$output'"
-                    ;;
-            esac
-            ;;
-        opus)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 32k '$output'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 64k '$output'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 96k '$output'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 128k '$output'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command $rv -c:a libopus -b:a 192k '$output'"
-                    ;;
-            esac
-            ;;
-        flac)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 0 '$output'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 4 '$output'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 8 '$output'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 12 '$output'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command $rv -c:a flac -compression_level 16 '$output'"
-                    ;;
-            esac
-            ;;
-        mp4 | mkv | flv | avi)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command -c:v libx264 -crf 32 -c:a aac -b:a 96k '$output'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command -c:v libx264 -crf 28 -c:a aac -b:a 128k '$output'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command -c:v libx264 -crf 23 -c:a aac -b:a 192k '$output'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command -c:v libx264 -crf 18 -c:a aac -b:a 256k '$output'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command -c:v libx264 -crf 14 -c:a aac -b:a 320k '$output'"
-                    ;;
-            esac
-            ;;
-        hevc)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 35 -c:a aac -b:a 96k '${output##*.}.mp4'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 28 -c:a aac -b:a 128k '${output##*.}.mp4'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 23 -c:a aac -b:a 192k '${output##*.}.mp4'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 18 -c:a aac -b:a 256k '${output##*.}.mp4'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command -c:v libx265 -crf 14 -c:a aac -b:a 320k '${output##*.}.mp4'"
-                    ;;
-            esac
-            ;;
-        webm)
-            case $quality in
-                very-low)
-                    sh -c "$ffmpeg_command -c:v libvpx -crf 35 -b:v 100K -c:a libvorbis -b:a 64K '$output'"
-                    ;;
-                low)
-                    sh -c "$ffmpeg_command -c:v libvpx -crf 28 -b:v 500K -c:a libvorbis -b:a 128K '$output'"
-                    ;;
-                medium)
-                    sh -c "$ffmpeg_command -c:v libvpx -crf 23 -b:v 1M -c:a libvorbis -b:a 192K '$output'"
-                    ;;
-                high)
-                    sh -c "$ffmpeg_command -c:v libvpx -crf 18 -b:v 2M -c:a libvorbis -b:a 256K '$output'"
-                    ;;
-                very-high)
-                    sh -c "$ffmpeg_command -c:v libvpx -crf 14 -b:v 4M -c:a libvorbis -b:a 320K '$output'"
-                    ;;
-            esac
-            ;;
-        *)
-            echo "Invalid audio output format: '$output'" >&2
-            ;;
+  local input="" media="" output="" quality="medium" resize=""
+  while getopts ":i:f:o:q:s:h" opt; do
+    case $opt in
+      i ) input="$OPTARG";;
+      f ) format="$OPTARG";;
+      o ) output="$OPTARG";;
+      q ) quality="$OPTARG";;
+      s ) resize="$OPTARG";;
+      h ) _media_tools_usage;;
+      \? ) _HandleError "Invalid option: -$OPTARG" >&2;;
+      : ) _HandleWarn "Option -$OPTARG requires an argument." >&2;;
     esac
+  done
+
+  [[ -z $input || -z $format ]] && _HandleError "Missing input and format options." && return 1
+  [[ -z $output ]] && output="${input%.*}.${format##*.}"
+  local rv="" ext="${input%.*}" _output_ext="${output##*.}" _output_allow_ext="mp3 m4a opus flac"
+  [[ $_all_video =~ (^|[[:space:]])$ext($|[[:space:]]) && $_output_allow_ext =~ (^|[[:space:]])$_output_ext($|[[:space:]]) ]] && rv="-vn"
+  [[ -n "$rv" ]] && local ffmpeg_command="ffmpeg -i '$input' $rv" || \
+    local ffmpeg_command="ffmpeg -i '$input'"
+
+  case ${output##*.} in
+    mp3 ) case $quality in
+        very-low) sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 9 '$output'" && break;;
+        low) sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 7 '$output'" && break;;
+        medium) sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 5 '$output'" && break;;
+        high) sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 2 '$output'" && break;;
+        very-high) sh -c "$ffmpeg_command $rv -c:a libmp3lame -q:a 0 '$output'" && break;;
+      esac;;
+    m4a ) case $quality in
+        very-low) sh -c "$ffmpeg_command $rv -c:a aac -b:a 64k '$output'" && break;;
+        low) sh -c "$ffmpeg_command $rv -c:a aac -b:a 96k '$output'" && break;;
+        medium) sh -c "$ffmpeg_command $rv -c:a aac -b:a 128k '$output'" && break;;
+        high) sh -c "$ffmpeg_command $rv -c:a aac -b:a 192k '$output'" && break;;
+        very-high) sh -c "$ffmpeg_command $rv -c:a aac -b:a 256k '$output'" && break;;
+      esac;;
+    opus ) case $quality in
+        very-low) sh -c "$ffmpeg_command $rv -c:a libopus -b:a 32k '$output'" && break;;
+        low) sh -c "$ffmpeg_command $rv -c:a libopus -b:a 64k '$output'" && break;;
+        medium) sh -c "$ffmpeg_command $rv -c:a libopus -b:a 96k '$output'" && break;;
+        high) sh -c "$ffmpeg_command $rv -c:a libopus -b:a 128k '$output'" && break;;
+        very-high) sh -c "$ffmpeg_command $rv -c:a libopus -b:a 192k '$output'" && break;;
+      esac;;
+    flac ) case $quality in
+        very-low) sh -c "$ffmpeg_command $rv -c:a flac -compression_level 0 '$output'" && break;;
+        low) sh -c "$ffmpeg_command $rv -c:a flac -compression_level 4 '$output'" && break;;
+        medium) sh -c "$ffmpeg_command $rv -c:a flac -compression_level 8 '$output'" && break;;
+        high) sh -c "$ffmpeg_command $rv -c:a flac -compression_level 12 '$output'" && break;;
+        very-high) sh -c "$ffmpeg_command $rv -c:a flac -compression_level 16 '$output'" && break;;
+      esac;;
+    mp4 | mkv | flv | avi) case $quality in
+        very-low) sh -c "$ffmpeg_command -c:v libx264 -crf 32 -c:a aac -b:a 96k '$output'" && break;;
+        low) sh -c "$ffmpeg_command -c:v libx264 -crf 28 -c:a aac -b:a 128k '$output'" && break;;
+        medium) sh -c "$ffmpeg_command -c:v libx264 -crf 23 -c:a aac -b:a 192k '$output'" && break;;
+        high) sh -c "$ffmpeg_command -c:v libx264 -crf 18 -c:a aac -b:a 256k '$output'" && break;;
+        very-high) sh -c "$ffmpeg_command -c:v libx264 -crf 14 -c:a aac -b:a 320k '$output'" && break;;
+      esac;;
+    hevc) case $quality in
+        very-low) sh -c "$ffmpeg_command -c:v libx265 -crf 35 -c:a aac -b:a 96k '${output##*.}.mp4'" && break;;
+        low) sh -c "$ffmpeg_command -c:v libx265 -crf 28 -c:a aac -b:a 128k '${output##*.}.mp4'" && break;;
+        medium) sh -c "$ffmpeg_command -c:v libx265 -crf 23 -c:a aac -b:a 192k '${output##*.}.mp4'" && break;;
+        high) sh -c "$ffmpeg_command -c:v libx265 -crf 18 -c:a aac -b:a 256k '${output##*.}.mp4'" && break;;
+        very-high) sh -c "$ffmpeg_command -c:v libx265 -crf 14 -c:a aac -b:a 320k '${output##*.}.mp4'" && break;;
+      esac;;
+    webm) case $quality in
+        very-low) sh -c "$ffmpeg_command -c:v libvpx -crf 35 -b:v 100K -c:a libvorbis -b:a 64K '$output'" && break;;
+        low) sh -c "$ffmpeg_command -c:v libvpx -crf 28 -b:v 500K -c:a libvorbis -b:a 128K '$output'" && break;;
+        medium) sh -c "$ffmpeg_command -c:v libvpx -crf 23 -b:v 1M -c:a libvorbis -b:a 192K '$output'" && break;;
+        high) sh -c "$ffmpeg_command -c:v libvpx -crf 18 -b:v 2M -c:a libvorbis -b:a 256K '$output'" && break;;
+        very-high) sh -c "$ffmpeg_command -c:v libvpx -crf 14 -b:v 4M -c:a libvorbis -b:a 320K '$output'" && break;;
+      esac;;
+    *) _HandleError "Invalid audio output format: '$output'" && break
+  esac
 }
 
-function mpdf(){
-    if ! which pdftk &>/dev/null; then
-        echo "merger pdf service not found. Installing now..."
-        inocon pdftk &>/dev/null
-        if which pdftk &>/dev/null; then
-            echo "Success installing merger pdf service..."
-            echo "Run again!"
-        else
-            echo "Failed installing merger pdf service..."
-        fi
-        return 1
-    fi
-    _check_file_pdf=($(find ./ -maxdepth 1 -type f -name "*.pdf" -printf "%f\n" | tr '\n' ' '))
-    if [[ ${#_check_file_pdf[@]} == 0 ]]; then
-        echo "File does not exist"
-        return 1
-    fi
-    if [[ -z $1 ]]; then
-        output="merged.pdf"
-    elif [[ -n ${1%.*} && -n ${1##*.} ]]; then
-        output="$1"
-    elif [[ $1 == "help" || $1 == "--help" || $1 == "-h" ]]; then
-        echo "Usage  : mpdf <option is optional>"
-        echo ""
-        echo "------------------------------------------------"
-        echo "Default output : 'merged.pdf'"
-        echo "Options:"
-        echo "    <filename>           Custom output"
-        echo "    help | -h | --help   Show this help message"
-        echo ""
-    fi
-    pdftk "${_check_file_pdf[@]}" cat output "$output"
-    if [[ -f $output ]]; then
-        echo "Complete merged pdf with output $output"
+############################ END TOOLS ############################
+########################## TOOLS BUNDLEs ##########################
+function installBundles(){
+  function install_bundles_docker(){
+    if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
+    function ___INSTALL__DOCKER__DU___(){
+      _HandleStart "Install dependency"
+      local stepone=$(update && installnc ca-certificates curl gnupg2 software-properties-common)
+      [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
+      _HandleStart "Install GPG Docker"
+      local steptwo=$(curl -fsSL https://download.docker.com/linux/$1/gpg | \
+        sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg)
+      [[ $? -ne 0 ]] && _HandleError "Failed install GPG" && return 1
+      _HandleStart "Add repo to system"
+      local stepthree=$(echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+            https://download.docker.com/linux/$1 $(lsb_release -cs) stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list >/dev/null)
+      [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
+      _HandleStart "Install Docker"
+      local stepfour=$(update && installnc docker-ce docker-ce-cli containerd.io && \
+        sudo usermod -aG docker $USER)
+      [[ $? -ne 0 ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 1
+    }
+    function ___CHECK__DOCKER___(){
+      [[ $(command -v docker) ]] && _HandleResult "Already installed" && return 0
+    }
+    if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
+      ___CHECK__DOCKER___
+      ___INSTALL__DOCKER__DU___ "$_sysName"
+      return 0
+    elif [[ $_sysName == "centos" ]]; then
+      ___CHECK__DOCKER___
+      _HandleStart "Install dependency"
+      local stepone=$(installnc yum-utils)
+      [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
+      _HandleStart "Add repo to system"
+      local steptwo=$(sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo)
+      [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
+      _HandleStart "Install docker"
+      local stepthree=$(installnc docker-ce docker-ce-cli containerd.io && \
+        sudo usermod -aG docker $USER)
+      [[ $? -ne 0 ]] && _HandleError "Failed install Docker" && return 1 || \
+        _HandleResult "Docker successfulty installed" && return 0
+    elif [[ $_sysName == "fedora" ]]; then
+      _HandleStart "Install dependency"
+      local stepone=$(installnc dnf-plugins-core)
+      [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
+      _HandleStart "Add repo to system"
+      local steptwo=$(sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo)
+      [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
+      _HandleStart "Install docker"
+      local stepthree=$(installnc docker-ce docker-ce-cli containerd.io && \
+        sudo usermod -aG docker $USER)
+      [[ $? -ne 0 ]] && _HandleError "Failed install Docker" && return 1 || \
+        _HandleResult "Docker successfulty installed" && return 0
     else
-        echo "Failed merged pdf"
+      _HandleWarn "$_notSupport" && return 1
     fi
-}
-
-function subs(){
-    for subs in "."/*.vtt; do
-        if [[ -z $subs ]]; then
-            echo "VTT file not exists"
-            return 0
+  }
+  function install_bundles_kubernetes_adm(){
+    if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
+    [[ $(command -v kubeadm) ]] && _HandleResult "Already installed" && return 0
+    if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
+      _HandleStart "Install dependency"
+      local stepone=$(update && installnc apt-transport-https ca-certificates curl)
+      [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
+      _HandleStart "Add kubernetes repository"
+      local steptwo=$(curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+        sudo apt-add-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main" && update)
+      [[ $? -ne 0 ]] && _HandleError "Failed adding repository" && return 1
+      _HandleStart "Install kubernetes master"
+      local stepthree=$(installnc kubeadm kubelet kubectl)
+      [[ $? -ne 0 ]] && _HandleError "Failed install kubernetes master" && return 1
+      _HandleStart "Hold package from update"
+      local stepfour=$(holdpackage kubeadm kubelet kubectl)
+      [[ $? -ne 0 ]] && _HandleError "Failed hold package" && return 1 || \
+        _HandleResult "Success installing kubernetes master" && return 0
+    elif [[ $_sysName == "centos" || $_sysName == "rhel" || $_sysName == "redhat" || $_sysName == "fedora" ]]; then
+      _HandleStart "Adding repository"
+      local stepone=$(sudo sh -c 'echo -e "[kubernetes]\nname=Kubernetes\nbaseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" \
+        > /etc/yum.repos.d/kubernetes.repo' && update)
+      [[ $? -ne 0 ]] && _HandleError "Failed adding repository" && return 1
+      _HandleStart "Install kubernetes master"
+      local steptwo=$(installnc kubeadm kubelet kubectl)
+      [[ $? -ne 0 ]] && _HandleError "Failed install" && return 1
+      _HandleStart "Activate kubelet startup on boot"
+      local stepthree=$(sudo systemctl enable --now kubelet)
+      [[ $? -ne 0 ]] && _HandleError "Failed enable kubelet startup" && return 1 || \
+        _HandleResult "Success installing kubernetes master" && return 0
+    elif [[ $_sysName == "arch" || $_sysName == "manjaro" ]]; then
+      _HandleStart "Install kubernetes master"
+      local stepone=$(aurinc kubernetes-bin)
+      [[ $? -eq 0 ]] && _HandleResult "Success installing kubernetes master" && return 0 || \
+        _HandleError "Failed installing kubernetes master" && return 1
+    elif [[ $_sysName == "amzn" ]]; then
+      _HandleStart "Install dependency"
+      local stepone=$(amazon-linux-extras install epel)
+      [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
+      _HandleStart "Install kubernetes master"
+      local steptwo=$(sudo yum install -y kubeadm kubelet kubectl)
+      [[ $? -ne 0 ]] && _HandleError "Failed install kubernetes master" && return 1
+      _HandleStart "Activate kubelet startup on boot"
+      local stepthree=$(sudo systemctl enable --now kubelet)
+      [[ $? -ne 0 ]] && _HandleError "Failed adding repository" && return 1
+      _HandleResult "Success installing kubernetes master" && return 0
+    else
+      _HandleWarn "$_notSupport"
+    fi
+  }
+  function install_bundles_minikube(){
+    if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
+    [[ $(command -v kubectl) ]] && _HandleResult "Already installed" && return 0
+    if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
+      _HandleStart "Install minikube"
+      local steps=$(curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+      sudo cp /etc/apt/trusted.gpg /etc/apt/trusted.gpg.d && \
+      echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+      update && install kubectl)
+      [[ $? -eq 0 ]] && _HandleResult "Success installing minikube" && return 0 || \
+        _HandleError "Failed installing minikube" && return 1
+    elif [[ $_sysName == "amzn" || $_sysName == "fedora" || \
+      $_sysName == "centos" || $_sysName == "redhat" || \
+      $_sysName == "rhel" || $_sysName == "centos" ]]; then
+      _HandleStart "Install minikube"
+      local stepone=$(sudo sh -c 'echo -e "[kubernetes]\nname=Kubernetes\nbaseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg" \
+        > /etc/yum.repos.d/kubernetes.repo' && update && sudo yum install -y kubectl)
+      [[ $? -eq 0 ]] && _HandleResult "Success installing minikube" && return 0 || \
+        _HandleError "Failed installing minikube" && return 1
+    else
+      _HandleWarn "$_notSupport"
+      return 1
+    fi
+  }
+  function install_bundles_cloudflared(){
+    [[ $(command -v cloudflared) ]] && _HandleResult "Already installed" && return 0
+    if [[ $(search cloudflared &>/dev/null | grep "cloudflared") ]]; then
+      _checkingPackage -i cloudflared
+    else
+      local url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-"
+      function installing_cloudflared_package(){
+        _HandleStart "Installing cloudflared"
+        if [[ $PREFIX ]]; then
+          local run=$(wget -O $PREFIX/bin/cloudflared $url$1 && chmod +x $PREFIX/bin/cloudflared)
+        elif [[ -d "/usr/bin/" ]]; then
+          local run=$(sudo wget -O /usr/bin/cloudflared $url$1 && chmod +x /usr/bin/cloudflared)
+        elif [[ -d "/bin/" ]]; then
+          local run=$(sudo wget -O /bin/cloudflared $url$1 && chmod +x /bin/cloudflared)
+        else
+          _HandleWarn "$_notSupport" && return 1
         fi
-        local base_name=$(basename $subs .vtt)
-        local output_file="$base_name.srt"
-
-        echo -ne "Convert ${base_name}.vtt to ${base_name}.srt"
-        
-        sed 's/align:start position:0%//g' "$subs" | awk -F '[<>]' '{
-            if (NF > 2 && $2 ~ /^[0-9:,]+$/) {
-                printf "%s --> %s\n", $2, $4
-            } else if (NF > 2) {
-                printf "%s", $3
-            } else {
-                print
-            }
-        }' > "$output_file"
-
-        [[ -f ./"${base_name}.srt" ]] && echo " Success.." || echo " Failure.."
-    done
+        [[ $? -eq 0 && $(command -v cloudflared) ]] && _HandleResult "Success installing cloudflared" && return 0 || \
+          _HandleError "Failed installing cloudflared" && return 1
+      }
+      case $_sysArch in
+        x86_64 ) installing_cloudflared_package amd64; break;;
+        i686 ) installing_cloudflared_package 386; break;;
+        armv7l ) installing_cloudflared_package arm; break;;
+        aarch64 ) installing_cloudflared_package arm64; break;;
+        * ) _HandleWarn "$_notSupport"; break;;
+      esac
+    fi
+  }
+  function install_bundles_snap(){
+    if $_thisTermux; then _HandleWarn "$_notSupport" && return 1; fi
+    [[ ! $(command -v sudo) ]] && _checkingPackage -i sudo
+    [[ $(command -v usermod) ]] && sudo usermod -G wheel $USER
+    if [[ ! $(command -v snap) ]]; then
+      _HandleStart "Installing snap to system"
+      if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
+        update && installnc snapd
+      elif [[ $_sysName == "fedora" ]]; then
+        installnc snapd
+      elif [[ $_sysName == "centos" || $_sysName == "redhat" || $_sysName == "rhel" ]]; then
+        installnc epel-release && installnc snapd
+      elif [[ $_sysName == "opensuse" ]]; then
+        sudo zypper addrepo --refresh https://download.opensuse.org/repositories/system:/snappy/openSUSE_Leap_15.0 snappy
+        sudo zypper --gpg-auto-import-keys refresh
+        sudo zypper dup --from snappy
+        installnc snapd
+      elif [[ $_sysName == "manjaro" ]]; then
+        installnc snapd
+      elif [[ $_sysName == "arch" ]]; then
+        cd $HOME && git clone https://aur.archlinux.org/snapd.git && cd snapd && makepkg -si && cd $HOME
+      else
+        _HandleWarn "Not listed, will be update!"
+      fi
+    fi
+  }
+  local __isArch=""
+  if [[ $_package_Manager == "pacman" ]]; then
+    function install_bundles_aur(){
+      __isArch="AUR"
+      if [[ ! $(command -v yay) ]]; then
+        [[ ! $(command -v git) ]] && _checkingPackage -i git
+        installnc base-devel
+        cd /opt
+        git clone https://aur.archlinux.org/yay.git
+        sudo chown -R $USER:$USER ./yay.git
+        cd yay.git && makepkg -si && cd $HOME
+      else
+        _HandleResult "Already installed"
+      fi
+    }
+  fi
+  PS3=$(_HandleCustom ${CYAN} "Install:" "")
+  select opt in "Snap" "$__isArch" "Docker" "Minikube" "Kubernetes Master" "Cloudflared" "Cancel"; do
+    case $opt in
+      "AUR" ) install_bundles_aur; break;;
+      "Snap" ) install_bundles_snap; break;;
+      "Docker" ) install_bundles_docker; break;;
+      "Minikube" ) install_bundles_minikube; break;;
+      "Kubernetes Master" ) install_bundles_kubernetes_adm; break;;
+      "Cloudflare" ) install_bundles_cloudflared; break;;
+      "Cancel" ) break;;
+      * ) _HandleWarn "Selected is invalid!"; continue;;
+    esac
+  done
 }
 
-################# END CONVERT - COMPRESS - MERGER #################
+######################## END TOOLS BUNDLEs ########################
+function play(){
+  ___COLORIZE___ "Happy Gaming! :)"
+  PS3="Choose game: "
+  local list=("Moon-buggy" "Tetris" "Pacman" "Space-Invaders" "Snake" "Greed" "Nethack" "Sudoku" "2048")
+  local nameGame="" playGame=""
+  select playing in "${list[@]}"; do
+    case $playing in
+      Moon-buggy) nameGame="moon-buggy" playGame="moon-buggy"; break;;
+      Tetris) nameGame="bastet" playGame="bastet"; break;;
+      Pacman) nameGame="pacman4console" playGame="pacmanplay"; break;;
+      Space-Invaders) nameGame="ninvaders" playGame="ninvaders"; break;;
+      Snake) nameGame="nsnake" playGame="nsnake"; break;;
+      Greed) nameGame="greed" playGame="greed"; break;;
+      Nethack) nameGame="nethack" playGame="nethack"; break;;
+      Sudoku) nameGame="nudoku" playGame="nudoku"; break;;
+      2048) nameGame="2048" playGame="2048"; break;;
+      *) _HandleWarn "Invalid input. Try again!"; break;;
+    esac
+  done
+  
+  if [[ $playGame == "2048" ]]; then
+    [[ ! $(command -v gcc) ]] && _checkingPackage -i clang -p gcc
+    [[ ! $(command -v wget) ]] && _checkingPackage -i wget 
+    wget -q https://raw.githubusercontent.com/mevdschee/2048.c/master/2048.c
+    gcc -o $PREFIX/bin/2048 2048.c
+    chmod +x $PREFIX/bin/2048
+    rm 2048.c
+  fi
+  if [[ ! $(command -v $playGame) ]]; then
+    _checkingPackage -i $nameGame -p $nameGame
+    [[ $? -eq 0 ]] && $playGame || return 1
+  else
+    $playGame
+  fi
+}
 
-function dbm(){
-    PS3="Select database guide: "
-    select database in mysql postgres exit; do
-        case $database in
-            mysql ) local _database_choosed="mysql";break;;
-            postgres) local _database_choosed="postgres";break;;
-            exit ) return 1;;
-            * ) echo -n "Try again!\n";;
-        esac
-    done
+function sysctl(){
 
-    PS3="Select action to user: "
-    select act in "backup restore" "create database" "change password" "create privileges user" "create read user" "login"; do
-        case $act in
-        "login" )
-            if [[ $_database_choosed == "mysql" ]]; then
-                echo ""
-                echo "sudo -u postgres psql"
-            elif [[ $_database_choosed == "postgres" ]]; then
-                echo ""
-                echo "mysql -u root -p"
-            fi
-            break
-            ;;
-        "backup restore" ) 
-            if [[ $_database_choosed == "mysql" ]]; then
-                echo ""
-                echo "Backup Single  : mysqldump -u <username> -p <password> <database_name> > <backup_file.sql>"
-                echo "Backup All     : mysqldump -u <username> -p <password> --all-databases > <backup_file.sql>"
-                echo "Restore Single : mysql -u <username> -p <password> <database_name> < <backup_file.sql>"
-                echo "Restore All    : mysql -u <username> -p <password> < <backup_file.sql>"
-            elif [[ $_database_choosed == "postgres" ]]; then
-                echo ""
-                echo "Backup Single  : pg_dump -U <username> -d <database_name> -f <backup_file.sql>"
-                echo "Backup All     : pg_dumpall -U <username> -f <backup_file.sql>"
-                echo "Restore Single : psql -U <username> -d <database_name> -f <backup_file.sql>"
-                echo "Restore All    : psql -U <username> -f <backup_file.sql>"
-            fi
-            break
-            ;;
-        "create privileges user"      )
-            if [[ $_database_choosed == "mysql" ]]; then
-                echo ""
-                echo "CREATE USER 'username'@'localhost' IDENTIFIED BY 'password';"
-                echo "GRANT ALL PRIVILEGES ON mydata.* TO 'username'@'localhost';"
-            elif [[ $_database_choosed == "postgres" ]]; then
-                echo ""
-                echo "CREATE USER username WITH PASSWORD 'password';"
-                echo "GRANT ALL PRIVILEGES ON DATABASE mydata TO username;"
-                echo "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO username;"
-                echo "GRANT CREATE ON SCHEMA public TO username;"
-                echo "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO username;"
-            fi
-            break
-            ;;
-        "create read user"       ) 
-            if [[ $_database_choosed == "mysql" ]]; then
-                echo ""
-                echo "CREATE USER 'myuser'@'localhost' IDENTIFIED BY 'mypassword';"
-                echo "GRANT SELECT ON mydata.* TO 'myuser'@'localhost';"
-            elif [[ $_database_choosed == "postgres" ]]; then
-                echo ""
-                echo "CREATE USER myuser WITH PASSWORD 'mypassword';"
-                echo "GRANT CONNECT ON DATABASE mydata TO myuser;"
-                echo "GRANT USAGE ON SCHEMA public TO myuser;"
-                echo "GRANT SELECT ON ALL TABLES IN SCHEMA public TO myuser;"
-            fi
-            break
-            ;;
-        "create database"   ) 
-            if [[ $_database_choosed == "mysql" ]]; then
-                echo ""
-                echo "CREATE DATABASE mydata;"
-            elif [[ $_database_choosed == "postgres" ]]; then
-                echo ""
-                echo "CREATE DATABASE mydata;"
-            fi
-            break
-            ;;
-        "change password"   ) 
-            if [[ $_database_choosed == "mysql" ]]; then
-                echo ""
-                echo "ALTER USER 'username'@'localhost' IDENTIFIED BY 'new_password';"
-            elif [[ $_database_choosed == "postgres" ]]; then
-                echo ""
-                echo "ALTER USER username WITH PASSWORD 'new_password';"
-            fi
-            break
-            ;;
-        "exit" ) return 1;;
-        * ) echo "Try again";;
-        esac
+  function _sctl_usage(){
+    echo "Usage: sysctl <options> service"
+    echo ""
+    echo "Options :"
+    echo "------------------------------------------------"
+    echo "    -u      Start service"
+    echo "    -r      Restart service"
+    echo "    -d      Stop service"
+    echo "    -E      Enable service"
+    echo "    -D      Disable service"
+    echo "    -s      Show status service"
+    echo "    -h      Show this help message"
+  }
+
+  while getopts ":d:e:s:r:S:t:ah" opt; do
+    case $opt in
+      u ) local action="start" actionSV="up" service="$OPTARG"; break;;
+      r ) local action="restart" actionSV="reload" service="$OPTARG"; break;;
+      d ) local action="stop" actionSV="down" service="$OPTARG"; break;;
+      E ) [[ $_thisTermux == true ]] && local action="sv-enable" || local action="enable"
+          local actionSV="sv-enable" service="$OPTARG"; break;;
+      D ) [[ $_thisTermux == true ]] && local action="sv-disable" || local action="disable"
+          local actionSV="sv-disable" service="$OPTARG"; break;;
+      s ) local action="status" actionSV="status" service="$OPTARG"; break;;
+      h ) _sctl_usage; return 0; break;;
+      : ) _HandleError "Option -$OPTARG requires an argument"; return 1; break;;
+      \?) _HandleWarn "Invalid option -$OPTARG"; return 1; break;;
+    esac
+  done
+
+  [[ -z $action || -z $actionSV ]] && _HandleError "Must specify one option" && return 1
+  if $_thisTermux; then
+    for thisAction in "start" "restart" "stop" "status" "sv-enable" "sv-disable"; do
+      [[ $action == $thisAction ]] && $_sysService $thisAction $service || _HandleWarn "$_notSupport"
+      break
     done
+  elif $_thisWin; then
+    for thisAction in "start" "restart" "stop" "status" "enable" "disable"; do
+      [[ $action == $thisAction ]] && sudo $_sysService $service $thisAction || _HandleWarn "$_notSupport"
+      break
+    done
+  else
+    local thisAction='^(start|restart|stop|status|enable|disable)$'
+    local updown='^(up|down)$'
+    if [[ $_sysService == "systemctl" ]]; then
+      [[ $action =~ $thisAction ]] && sudo $_sysService $action $service && return 0 ||
+        _HandleWarn "$_notSupport" && return 1
+    elif [[ $_sysService == "service" ]]; then
+      [[ $action == $thisAction ]] && sudo $_sysService $service $action && return 0 ||
+        _HandleWarn "$_notSupport" && return 1
+    elif [[ $_sysService == "sv" ]]; then
+      if [[ $action =~ $updown ]]; then
+        sudo $_sysService $action $service && return 0
+      elif [[ $action =~ $thisAction ]]; then
+        sudo $_sysService $action $service && return 0
+      else
+        _HandleWarn "$_notSupport" && return 1
+      fi
+    else
+      
+    fi
+  fi
 }
 
 function ls(){
-    if ! which exa &>/dev/null; then
-        echo "Dependency not installed. Installing now..."
-        inocon exa &>/dev/null
-        if ! which exa &>/dev/null; then
-            echo "Failed to install dependency.."
-            return 1
-        fi
-        $0 $*
-    else
-        exa --icons --group-directories-first $*
-    fi
+  [[ ! $(command -v exa) ]] && _checkingPackage -i exa -p exa && exa --icons --group-directories-first $* || exa --icons --group-directories-first $*
 }
 
-function kl() {
-    function usage() {
-        echo "Usage: kl <program>"
-        return 1
-    }
-    if [[ $# -eq 0 ]]; then
-        usage
+function aliasHelp(){
+  function __PACKAGE_MANAGER__(){
+    echo "    install         Install package"
+    echo "    installnc       Install package with no confirm"
+    echo "    update          Update package"
+    echo "    upgrade         Upgrade package"
+    echo "    remove          Remove package"
+    echo "    search          Search package"
+    echo "    orphan          Remove unused package"
+    echo "    reinstall       Reinstall package"
+    echo "    updateupgrade   Update and upgrade package"
+    echo "    detail          Show etail package"
+    echo "    checkpackage    Check package"
+    echo "    listpakcage     Package list"
+    echo "    holdpackage     Hold package from update"
+  }
+  function __AUR_MANAGER__(){
+    echo "    auri            Install package from aur"
+    echo "    aurinc          Install package from aur with no confirm"
+    echo "    auru            Update package from aur"
+    echo "    auruu           Upgrade package from aur"
+    echo "    aurs            Search package from aur"
+    echo "    aurr            Remove package from aur"
+  }
+  function __SNAP_MANAGER__(){
+    echo "    snapi           Install package from snap"
+    echo "    snapu           Update package from snap"
+    echo "    snapv           Check version package from snap"
+    echo "    snaps           Search package from snap"
+    echo "    snapl           List package from snap"
+    echo "    snapla          List all package from snap"
+    echo "    snapon          Enable package from snap"
+    echo "    snapoff         Disable package from snap"
+    echo "    snapr           Remove package from snap"
+  }
+  function __NET_TOOLS__(){
+    echo "    myip            Check network ip"
+    echo "    getip           Get IP of domain"
+    if $_thisWin; then echo "    netChange       Change network\n    proxyConnect    Connect proxy"; fi
+    echo "    sshConnect      SSH Manager"
+    echo "    restartDNS      Restart DNS"
+    echo "    speeds          Speedtest"
+    echo "    fileBrowser     File sharing based browser"
+  }
+  function __REGULAR_TOOLS__(){
+    if $_thisTermux; then echo "    termux_tools    Termux tools"; fi
+    echo "    dl_tools        Download manager"
+    echo "    git_tools       Git manager"
+    echo "    image_tools     Image coverter and compress"
+    echo "    document_tools  Documment converter and merge"
+    echo "    media_tools     Audio and video converter"
+  }
+  function __OTHERS__(){
+    echo "    installBundles  Bundling installer"
+    echo "    play            Play console games"
+    echo "    sysctl          System control"
+  }
+  function __PACKAGE_MANAGER_MINI__(){
+    echo "    i               Install package"
+    echo "    inc             Install package with no confirm"
+    echo "    u               Update package"
+    echo "    uu              Upgrade package"
+    echo "    uuu             Remove package"
+    echo "    r               Search package"
+    echo "    s               Remove unused package"
+    echo "    o               Reinstall package"
+    echo "    ri              Update and upgrade package"
+    echo "    d               Show etail package"
+    echo "    cpkg            Check package"
+    echo "    lpkg            Package list"
+    echo "    hpkg            Hold package from update"
+  }
+  function __NET_TOOLS_MINI__(){
+    echo "    nch             Change network (wsl 1)"
+    echo "    pc              Connect proxy (wsl 1)"
+    echo "    sc              SSH Manager"
+    echo "    rdns            Restart DNS"
+    echo "    spd             Speedtest"
+    echo "    fbw             File sharing based browser"
+  }
+  function __GIT_TOOLS_MINI__(){
+    echo "    gpull           Git pull"
+    echo "    gpush           Git push"
+    echo "    gits            Build GIT Server on current directory"
+    echo "    gitw            Create working directory for GIT Server"
+    echo "    gitl            Show log of commit"
+    echo "    gitr            Git soft reset (rollback)"
+    echo "    gitR            Git hard reset (rollback)"
+  }
+  function __REGULAR_MINI__(){
+    echo "    ttmux           Termux tools"
+    echo "    dlt             Download manager"
+    echo "    imt             Image coverter and compress"
+    echo "    doct            Documment converter and merge"
+    echo "    met             Audio and video converter"
+    echo "    ibun            Bundling installer"
+    echo "    e               Exit session"
+    echo "    c               Clear terminal"
+    echo "    v               nVim"
+    echo "    p               Ping tools"
+    echo "    vz              Vim .zshrc"
+    echo "    vv              Vim .vimrc"
+    echo "    rz              Restart ZSH"
+  }
+  function __EXAMPLE__(){
+    echo "Usage: aliasHelp [option] <arguments>"
+    echo ""
+    echo "Options:"
+    echo "    -h ARG                 See command needed"
+    echo ""
+    echo "Arguments:"
+    echo "    example | <empty>      Show this message"
+    echo "    pm | packagemanager    Package Manager command"
+    echo "    aur | yay              AUR command"
+    echo "    snap                   SNAP command"
+    echo "    net | nettool          Internet tools command"
+    echo "    regular                Regular tools command"
+    echo "    other                  Other command"
+    echo "    git                    Git command"
+    echo "    simple                 Simple command"
+  }
+  while getopts ":h:" opt; do
+    case $opt in
+      "h" ) local helper="$OPTARG" && break ;;
+      \? ) _HandleError "Invalid option '-$OPTARG'" >&2;;
+      : ) _HandleWarn "Option -$OPTARG requires an argument. Try 'aliasHelp -h example'." >&2;;
+    esac
+  done
+  [[ $# -eq 0 ]] && __EXAMPLE__ && return 1
+  [[ -z $helper || ! $helper ]] && return 1
+  function _template(){
+    echo "Helper Aliases from ${CYAN}$1${RESET}"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Regular Command:"
+    $2
+    if [[ -n $3 ]]; then
+    echo -ne "\nSimple Command: \n"
+    $3
     fi
-    kill $(ps -e | grep $1 | awk '{print $1}')
+  }
+  case $helper in
+    pm | packagemanager ) _template "Package Manager" \
+      "__PACKAGE_MANAGER__" "__PACKAGE_MANAGER_MINI__";;
+    aur | yay ) _template "AUR" "__AUR_MANAGER__";;
+    snap ) _template "SNAP" "__SNAP_MANAGER__";;
+    net | nettool ) _template "Net Tools" "__NET_TOOLS__" "__NET_TOOLS_MINI__";;
+    regular ) _template "Regular Tools" "__REGULAR_TOOLS__";;
+    other ) _template "Other Command" "__OTHERS__";;
+    git ) _template "GIT Command" "__GIT_TOOLS_MINI__";;
+    simple ) _template "Regular Simple Command" "__REGULAR_MINI__";;
+    example | * ) __EXAMPLE__;;
+  esac
 }
 
-function ca() {
-    if [ -f $HOME/.aliases ]; then
-        rm $HOME/.aliases && nano $HOME/.aliases && exec zsh
-    else
-        nano $HOME/.aliases && exec zsh
-    fi
-}
-
-function troubleshoot() {
-    local action=("ping")
-    PS3="What do you want to solve? "
-    select opt in "${action[@]}"; do
-        case $opt in
-        ping)
-            if [[ $system == "windows" ]]; then
-                sudo setcap cap_net_raw+p /bin/ping
-                echo "Success fix ping permission"
-            else
-                echo "$not_support"
-                return 1
-            fi
-            break
-            ;;
-        esac
-    done
-}
-
-function dlc(){
-    if ! which ssh &>/dev/null; then
-        echo "Dependency is not installed. Installing now..."
-        inocon openssh &>/dev/null
-        return 1
-    fi
-    file_config=$HOME/.scrc
-    if [[ ! -f $HOME/.scrc ]]; then
-        touch $file_config
-    fi
-    function check() {
-        local port=$1
-        if ! [[ $port =~ ^[0-9]+$ ]]; then
-            echo "[!] Your input is not valid"
-            return 1
-        fi
-        if (($port < 1 || $port > 65535)); then
-            echo "[!] Only port 1 - 65535"
-            return 1
-        fi
-    }
-    declare -A options=()
-    while read -r line; do
-        options["$line"]=$line
-    done <"$file_config"
-
-    PS3="Choose account: "
-    select option in "${options[@]}"; do
-        if [[ -n $option ]]; then
-            account_ssh=${options["$option"]}
-            break
-        else
-            echo "[!] Invalid option. Try again!"
-        fi
-    done
-    echo -n "Custom ssh port [22]: "
-    read port
-    if [[ -n $port ]]; then
-        check $port
-    else
-        port=22
-    fi
-    clear
-    for url in $@; do
-        name_files=$(basename $url)
-        echo "Download file $name_files"
-        ssh -p $port $account_ssh "mkdir -p ./download; wget -O ./download/$name_files $url -q --show-progress"
-        echo "\nGet data from cloud"
-        scp -P $port $account_ssh:download/$name_files ./
-        echo "Downloaded: $name_files"
-        echo "\nRemove file on cloud"
-        ssh -p $port $account_ssh "rm ./download/$name_files; [[ ! -f ./download/$name_files ]] && echo -ne 'Success delete $name_files\n\n' || echo -ne 'Failed to deletion\n\n'"
-    done
-}
-
-function tax(){
-    if [[ -z $1 ]]; then
-        echo "Only indonesian [!]"
-        echo "tax <price> | calculate tax of product"
-    fi
-    local input=$1
-    local customs=7.5
-    local now_tax=11
-    local admin_fee=15000
-    local handle_fee=30000
-    local tax_admin=$(awk "BEGIN {printf \"%.2f\", $admin_fee * $now_tax / 100}")
-    
-
-
-    local customs_totals=$(awk "BEGIN {printf \"%.2f\", $input * $customs / 100}")
-    local customs_tax=$(awk "BEGIN {printf \"%.2f\", $customs_totals * $now_tax / 100}")
-    local total=$(awk "BEGIN {printf \"%.2f\", $input + $customs_totals + $customs_tax + $admin_fee + $handle_fee + $tax_admin}")
-    local tax_total=$(awk "BEGIN {printf \"%.2f\", $total - $input}")
-
-    local formated_price="Rp $(printf "%'d" $input | sed 's/\B\([0-9]\{3\}\)\>/.\1/g')"
-    local formated_tax="Rp $(printf "%'d" $tax_total | sed 's/\B\([0-9]\{3\}\)\>/.\1/g')"
-    local formated_total="Rp $(printf "%'d" $total | sed 's/\B\([0-9]\{3\}\)\>/.\1/g')"
-
-    echo "Price     : $formated_price"
-    echo "Tax       : $formated_tax"
-    echo "Total Pay : $formated_total"
-}
-
-function ah() {
-    function usage() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Options:"
-        echo "------------------------------------------------"
-        echo " Get all help command with this description"
-        echo "    -a    Ansible"
-        echo "    -k    Kubernetes"
-        echo "    -d    docker"
-        echo "    -g    Git"
-        echo "    -t    Terraform"
-        echo "    -n    Nmap"
-        echo "    -i    IP Manager"
-        echo "    -P    Proxy Manager"
-        echo "    -p    Package Manager"
-        echo "    -H    Show simple command"
-        echo "    -h    Show this help message"
-        for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
-            if [[ $_sup_sys == $_my_system ]]; then
-                echo "    -a    Show Ansible command"
-                echo "    -k    Show Kubernetes command"
-                echo "    -d    Show Docker command"
-                echo "    -t    Show Terraform command"
-                break
-            fi
-        done
-        echo ""
-        return 1
-    }
-
-    function _package_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        if [[ $pm == 'pacman' ]]; then
-            echo "    auri                       AUR install"
-            echo "    auru                       AUR update"
-            echo "    auruu                      AUR upgrade"
-            echo "    aurs                       AUR Search"
-            echo "    aurr                       AUR Remove"
-            echo ""
-        fi
-        echo "    cpkg | checkpkg            Check package"
-        echo "    d | detail                 Detail package"
-        echo "    hpkg | holdpkg             Hold package"
-        echo "    i | install                Install package"
-        echo "    lpkg | listpkg             List of package"
-        echo "    r | remove                 Remove package"
-        echo "    ri | reinstall             Reinstall package"
-        echo "    ro | orphan                Remove orphan package"
-        echo "    s | search                 Search package"
-        echo "    u | update                 Update package"
-        echo "    uu | upgrade               Upgrade package"
-        echo "    uuu | updateandupgrade     Update and upgrade package"
-        if which snap &>/dev/null; then
-            echo ""
-            echo "    snapi                      SNAP install"
-            echo "    snapu                      SNAP update"
-            echo "    snapv                      SNAP revert"
-            echo "    snaps                      SNAP Search"
-            echo "    snapl                      SNAP list"
-            echo "    snapla                     SNAP list all"
-            echo "    snapon                     SNAP Enable"
-            echo "    snapoff                    SNAP disable"
-            echo "    snapr                      SNAP Remove"
-        elif [[ $system == "termux" ]]; then
-            echo ""
-        else
-            echo ""
-            echo "    snapi                      Install SNAP Package Manager"
-        fi
-        return 1
-    }
-
-    function _nmap_shortcut(){
-        if which nmap &>/dev/null; then
-            function nmap-aliases(){
-                echo "NMAP Aliases : "
-                echo "    nmap-tcp            nmap -sS -p-"
-                echo "    nmap-udp            nmap -sU -p-"
-                echo "    nmap-quick          nmap -T4 -F"
-                echo "    nmap-stealth        nmap -sS -sV -T4 -O -A -F --version-light"
-                echo "    nmap-allports       nmap -p-"
-                echo "    nmap-service        nmap -sV"
-                echo "    nmap-os             nmap -O"
-                echo "    nmap-scripts        nmap -sC"
-                echo "    nmap-fragment       nmap -f"
-                echo "    nmap-mtu            nmap --mtu 24"
-                echo "    nmap-idle           nmap -sI"
-                echo "    nmap-ping           nmap -sn"
-                echo "    nmap-arp            nmap -PR"
-                echo "    nmap-output         nmap -oN scan.txt"
-                echo "    nmap-xml            nmap -oX scan.xml"
-                echo "    nmap-aggressive     nmap -T4 -A -v"
-                echo "    nmap-intense        nmap -T4 -A -v --top-ports 1000"
-                echo "    nmap-http           nmap -p 80,8080"
-                echo "    nmap-https          nmap -p 443"
-                echo "    nmap-ssh            nmap -p 22"
-                echo "    nmap-ftp            nmap -p 21"
-                echo "    nmap-dns            nmap -p 53"
-                echo "    nmap-smb            nmap -p 139,445"
-                echo "    nmap-rdp            nmap -p 3389"
-                echo "    nmap-help           nmap --help"
-            }
-        fi
-    }
-    
-    function _proxy_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    proh                       Proxy hotshare"
-        echo "    prohc                      Proxy http-custom"
-        echo "    prohi                      Proxy http-injector"
-        echo "    pror                       Proxy reset"
-        echo "    pros                       Proxy socks"
-        echo "    prosc                      Proxy custom"
-        echo "    proxy                      Regular proxy command"
-        return 1
-    }
-
-    function _helper_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    ca                         Change Alias"
-        echo "    cfs | cloudfile            Local to internet"
-        echo "    colormap                   Show color"
-        echo "    cdocs                      Document onverter"
-        echo "    cimage                     Image converter"
-        echo "    cmedia                     Music and Video converter"
-        echo "    dbm                        Database manager guide"
-        echo "    dl | download              Download with simple command"
-        echo "    giit                       GIT Program make it simple"
-        echo "    mpdf                       Merge PDF file"
-        echo "    rz                         Restart zsh"
-        echo "    sctl                       Service of system"
-        echo "    kali                       Kali Nethunter manager"
-        echo "    subs                       Convert vtt to srt"
-        echo "    ts | troubleshoot          Fixing Manager"
-        if [[ $system == 'termux' ]]; then
-            echo "    troot                      Termux using proot"
-        fi
-        return 1
-    }
-
-    function _git_helper(){
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    gpull                      Git pull"
-        echo "    gp                         Git push command"
-        echo "    gpush                      Git add, commit and pull command"
-        echo ""
-    }
-
-    function _ip_Manager() {
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    cf | cloudflare            Cloudflare operation"
-        echo "    getip                      Get IP Address from Local or Online ISP"
-        echo "    myip                       Check my ip"
-        echo "    netch                      Change IP and DNS local"
-        echo "    sc                         Connect SSH with database"
-        if [[ $system != 'termux' ]]; then
-            echo "    redns                      Flush DNS"
-        fi
-        return 1
-    }
-
-    function _batch_command(){
-        echo "Usage: ah <option>"
-        echo ""
-        echo "Default command can used:"
-        echo "------------------------------------------------"
-        echo "    install-kubernetes-master  Install kubernetes master"
-        echo "    install-minikube           Install minikube"
-        echo "    install-kubectl            Install kubectl"
-        echo "    install-ansible            Install ansible"
-        echo "    install-docker             Install docker"
-        echo "    install-terraform          Install terraform"
-    }
-
-    # DevOps Helper
-    for _sup_sys in ubuntu debian arch amzn fedora rhel redhat centos; do
-        if [[ $_sup_sys == $_my_system ]]; then
-            function _ansible_shortcut(){
-                echo "This is Ansible command list"
-                echo ""
-                echo "Default command can used:"
-                echo "------------------------------------------------"
-                echo 'Ansible : '
-                echo '    a           ansible '
-                echo '    aconf       ansible-config '
-                echo '    acon        ansible-console '
-                echo '    aver        ansible-version'
-                echo '    arinit      ansible-role-init'
-                echo '    aplaybook   ansible-playbook '
-                echo '    ainv        ansible-inventory '
-                echo '    adoc        ansible-doc '
-                echo '    agal        ansible-galaxy '
-                echo '    apull       ansible-pull '
-                echo '    aval        ansible-vault'
-            }
-            function _kubernetes_shortcut(){
-                echo "This is Kubernetes command list"
-                echo ""
-                echo "Default command can used:"
-                echo "------------------------------------------------"
-                echo 'Kubernetes :'
-                echo '    k           kubectl'
-                echo '    kca         _kca(){ kubectl "$@" --all-namespaces;  unset -f _kca; }; _kca'
-                echo '    kaf         kubectl apply -f'
-                echo '    keti        kubectl exec -t -i'
-                echo '    kcuc        kubectl config use-context'
-                echo '    kcsc        kubectl config set-context'
-                echo '    kcdc        kubectl config delete-context'
-                echo '    kccc        kubectl config current-context'
-                echo '    kcgc        kubectl config get-contexts'
-                echo '    kdel        kubectl delete'
-                echo '    kdelf       kubectl delete -f'
-                echo '    kgp         kubectl get pods'
-                echo '    kgpa        kubectl get pods --all-namespaces'
-                echo '    kgpw        kgp --watch'
-                echo '    kgpwide     kgp -o wide'
-                echo '    kep         kubectl edit pods'
-                echo '    kdp         kubectl describe pods'
-                echo '    kdelp       kubectl delete pods'
-                echo '    kgpall      kubectl get pods --all-namespaces -o wide'
-                echo '    kgpl        kgp -l'
-                echo '    kgpn        kgp -n'
-                echo '    kgs         kubectl get svc'
-                echo '    kgsa        kubectl get svc --all-namespaces'
-                echo '    kgsw        kgs --watch'
-                echo '    kgswide     kgs -o wide'
-                echo '    kes         kubectl edit svc'
-                echo '    kds         kubectl describe svc'
-                echo '    kdels       kubectl delete svc'
-                echo '    kgi         kubectl get ingress'
-                echo '    kgia        kubectl get ingress --all-namespaces'
-                echo '    kei         kubectl edit ingress'
-                echo '    kdi         kubectl describe ingress'
-                echo '    kdeli       kubectl delete ingress'
-                echo '    kgns        kubectl get namespaces'
-                echo '    kens        kubectl edit namespace'
-                echo '    kdns        kubectl describe namespace'
-                echo '    kdelns      kubectl delete namespace'
-                echo '    kcn         kubectl config set-context --current --namespace'
-                echo '    kgcm        kubectl get configmaps'
-                echo '    kgcma       kubectl get configmaps --all-namespaces'
-                echo '    kecm        kubectl edit configmap'
-                echo '    kdcm        kubectl describe configmap'
-                echo '    kdelcm      kubectl delete configmap'
-                echo '    kgsec       kubectl get secret'
-                echo '    kgseca      kubectl get secret --all-namespaces'
-                echo '    kdsec       kubectl describe secret'
-                echo '    kdelsec     kubectl delete secret'
-                echo '    kgd         kubectl get deployment'
-                echo '    kgda        kubectl get deployment --all-namespaces'
-                echo '    kgdw        kgd --watch'
-                echo '    kgdwide     kgd -o wide'
-                echo '    ked         kubectl edit deployment'
-                echo '    kdd         kubectl describe deployment'
-                echo '    kdeld       kubectl delete deployment'
-                echo '    ksd         kubectl scale deployment'
-                echo '    krsd        kubectl rollout status deployment'
-                echo '    kgrs        kubectl get replicaset'
-                echo '    kdrs        kubectl describe replicaset'
-                echo '    kers        kubectl edit replicaset'
-                echo '    krh         kubectl rollout history'
-                echo '    kru         kubectl rollout undo'
-                echo '    kgss        kubectl get statefulset'
-                echo '    kgssa       kubectl get statefulset --all-namespaces'
-                echo '    kgssw       kgss --watch'
-                echo '    kgsswide    kgss -o wide'
-                echo '    kess        kubectl edit statefulset'
-                echo '    kdss        kubectl describe statefulset'
-                echo '    kdelss      kubectl delete statefulset'
-                echo '    ksss        kubectl scale statefulset'
-                echo '    krsss       kubectl rollout status statefulset'
-                echo '    kga         kubectl get all'
-                echo '    kgaa        kubectl get all --all-namespaces'
-                echo '    kl          kubectl logs'
-                echo '    kl1h        kubectl logs --since 1h'
-                echo '    kl1m        kubectl logs --since 1m'
-                echo '    kl1s        kubectl logs --since 1s'
-                echo '    klf         kubectl logs -f'
-                echo '    klf1h       kubectl logs --since 1h -f'
-                echo '    klf1m       kubectl logs --since 1m -f'
-                echo '    klf1s       kubectl logs --since 1s -f'
-                echo '    kcp         kubectl cp'
-                echo '    kgno        kubectl get nodes'
-                echo '    keno        kubectl edit node'
-                echo '    kdno        kubectl describe node'
-                echo '    kdelno      kubectl delete node'
-                echo '    kgpvc       kubectl get pvc'
-                echo '    kgpvca      kubectl get pvc --all-namespaces'
-                echo '    kgpvcw      kgpvc --watch'
-                echo '    kepvc       kubectl edit pvc'
-                echo '    kdpvc       kubectl describe pvc'
-                echo '    kdelpvc     kubectl delete pvc'
-                echo '    kgds        kubectl get daemonset'
-                echo '    kgdsw       kgds --watch'
-                echo '    keds        kubectl edit daemonset'
-                echo '    kdds        kubectl describe daemonset'
-                echo '    kdelds      kubectl delete daemonset'
-                echo '    kgcj        kubectl get cronjob'
-                echo '    kecj        kubectl edit cronjob'
-                echo '    kdcj        kubectl describe cronjob'
-                echo '    kdelcj      kubectl delete cronjob'
-                echo '    kgj         kubectl get job'
-                echo '    kej         kubectl edit job'
-                echo '    kdj         kubectl describe job'
-                echo '    kdelj       kubectl delete job'
-            }
-            function _docker_shortcut(){
-                echo "This is Docker command list"
-                echo ""
-                echo "Default command can used:"
-                echo "------------------------------------------------"
-                echo 'Docker :'
-                echo '    dcu         docker compose up -d'
-                echo '    dcd         docker compose down'
-                echo '    dbl         docker build'
-                echo '    dcin        docker container inspect'
-                echo '    dcls        docker container ls'
-                echo '    dclsa       docker container ls -a'
-                echo '    dib         docker image build'
-                echo '    dii         docker image inspect'
-                echo '    dils        docker image ls'
-                echo '    dipu        docker image push'
-                echo '    dirm        docker image rm'
-                echo '    dit         docker image tag'
-                echo '    dlo         docker container logs'
-                echo '    dnc         docker network create'
-                echo '    dncn        docker network connect'
-                echo '    dndcn       docker network disconnect'
-                echo '    dni         docker network inspect'
-                echo '    dnls        docker network ls'
-                echo '    dnrm        docker network rm'
-                echo '    dpo         docker container port'
-                echo '    dpu         docker pull'
-                echo '    dr          docker container run'
-                echo '    drit        docker container run -it'
-                echo '    drm         docker container rm'
-                echo '    drm!        docker container rm -f'
-                echo '    dsinit      docker swarm init'
-                echo '    dsjoin      docker swarm join'
-                echo '    dst         docker container start'
-                echo '    drs         docker container restart'
-                echo '    dsta        docker stop $(docker ps -q)'
-                echo '    dstp        docker container stop'
-                echo '    dtop        docker top'
-                echo '    dvi         docker volume inspect'
-                echo '    dvls        docker volume ls'
-                echo '    dvprune     docker volume prune'
-                echo '    dxc         docker container exec'
-                echo '    dxcit       docker container exec -it'
-            }
-            function _terraform_shortcut(){
-                echo "This is Terraform command list"
-                echo ""
-                echo "Default command can used:"
-                echo "------------------------------------------------"
-                echo 'Terraform : '
-                echo '    tf          terraform'
-                echo '    tfa         terraform apply'
-                echo '    tfc         terraform console'
-                echo '    tfd         terraform destroy'
-                echo '    tff         terraform fmt'
-                echo '    tfi         terraform init'
-                echo '    tfo         terraform output'
-                echo '    tfp         terraform plan'
-                echo '    tfv         terraform validate'
-            }
-            break
-        fi
-    done
-
-    while getopts "agkdtiPpHh" opt; do
-        case $opt in
-        "a") _ansible_shortcut;break;;
-        "k") _kubernetes_shortcut;break;;
-        "d") _docker_shortcut;break;;
-        "g") _git_helper;break;;
-        "t") _terraform_shortcut;break;;
-        "n") _nmap_shortcut;break;;
-        "i") _ip_Manager; break; ;;
-        "P") _proxy_Manager; break; ;;
-        "p") _package_Manager; break; ;;
-        "H") _helper_Manager; break; ;;
-        "h" | *) usage; break; ;;
-        \? | :)
-            echo "Invalid option" >&2; usage; exit 1; ;;
-        esac
-    done
-
-    if [[ $# -eq 0 ]]; then
-        usage
-        return 1
-    fi
-
-}
-
-# Package Manager
 alias i="install"
 alias u="update"
 alias uu="upgrade"
+alias uuu="updateupgrade"
 alias r="remove"
 alias s="search"
 alias o="orphan"
 alias ri="reinstall"
-alias uuu="updateandupgrade"
 alias d="detail"
-alias cpkg="checkpkg"
-alias lpkg="listpkg"
-alias hpkg="holdpkg"
+alias cpkg="checkpackage"
+alias lpkg="listpackage"
+alias hpkg="holdpackage"
 
-# Tools
-alias cf="cloudflare"
-alias cfs="cloudfile"
-alias dl="download"
-alias mon="monitoring"
-alias ts="troubleshoot"
+alias nch="netChange"
+alias pc="proxyConnect"
+alias sc="sshConnect"
+alias rdns="restartDNS"
+alias spd="speeds"
+alias fbw="filebrowser"
 
-# Git
-alias gpull="git pull"
-alias gp="git push"
-function gpush(){
-    if [[ -z $1 ]]; then
-        echo "Add commentary of commit"
-    fi
-    git add . && git commit -m "$1" && git push
-}
+alias gpull="git_tools -p"
+alias gpush="git_tools -P"
+alias gits="git_tools -s"
+alias gitw="git_tools -w"
+alias gitl="git_tools -l"
+alias gitr="git_tools -r"
+alias gitR="git_tools -R"
 
-# Regular
+alias ttmux="termux_tools"
+alias dlt="dl_tools"
+alias imt="image_tools"
+alias doct="document_tools"
+alias met="media_tools"
+
+alias ibun="isntallBundels"
+
 alias e="exit"
 alias c="clear"
 alias v="nvim"
 alias p="ping"
-alias ijin="chmod +x"
-alias suser="sudo chmod u+s"
-alias zshrh="echo '' > $HOME/.zsh_history && exec zsh"
-alias unv="rm ~/.config/nvim/init.vim && nano ~/.config/nvim/init.vim"
 alias vz="vim ~/.zshrc"
 alias vv="vim ~/.vimrc"
 alias rz="exec zsh"
@@ -3739,24 +1754,3 @@ alias l="ls"
 alias la="ls -la"
 alias ll="ls -l"
 alias ls="ls"
-alias "ls -la"="ls -la"
-alias "ls -l"="ls -l"
-alias grep="grep --color"
-alias newdcu="rm docker-compose.yaml && nano docker-compose.yaml"
-function cz(){echo "" > $HOME/.zsh_history; echo "Clear history completed..";exec zsh;}
-
-# Archive
-if which tar &>/dev/null; then
-    alias compress="tar -czvf"
-    alias extract="tar -xzvf"
-    alias cm="tar -czvf"
-    alias ex="tar -xzvf"
-fi
-
-# Proxy
-alias prosc="proxy socks-custom"
-alias proh="proxy hotshare"
-alias prohi="proxy http-injector"
-alias prohc="proxy http-custom"
-alias pros="proxy socks"
-alias pror="proxy reset"
