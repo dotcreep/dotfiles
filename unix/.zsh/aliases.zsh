@@ -1722,7 +1722,7 @@ alias imt="image_tools"
 alias doct="document_tools"
 alias met="media_tools"
 
-alias ibun="isntallBundels"
+alias ibun="installBundles"
 
 alias e="exit"
 alias c="clear"
