@@ -288,12 +288,12 @@ function holdpackage(){
 
 # AUR
 if [[ $(command -v yay) ]]; then
-    function auri() { yay -S $*; }
-    function aurinc() { yay -S --noconfirm $*; }
-    function auru() { yay -Sy $*; }
-    function auruu() { yay -Syu $*; }
-    function aurs() { yay -Ss $*; }
-    function aurr() { yay -Runscd $*; }
+  function auri() { yay -S $*; }
+  function aurinc() { yay -S --noconfirm $*; }
+  function auru() { yay -Sy $*; }
+  function auruu() { yay -Syu $*; }
+  function aurs() { yay -Ss $*; }
+  function aurr() { yay -Runscd $*; }
 fi
 
 # SNAP
@@ -406,7 +406,7 @@ function netChange(){
         [[ -z $lan ]] && lan=$intf
     fi
   done
-  local psCheck=$(powershell.exe /c ipconfig)
+  local psCheck=$(powershell.exe /c '& {ipconfig}')
   for checkInterface in "Ethernet adapter Ethernet:" "Wireless LAN adapter WiFi:"; do
     local checking=$(grep -A3 -e "$checkInterface" <<< "$psCheck" | grep -o 'Media disconnected')
     [[ $checkInterface == *Ethernet* && -z $checking ]] && local wire="LAN" || local wire=""
@@ -482,17 +482,13 @@ function netChange(){
       [[ $device == "Ethernet" ]] && local _gateway=$__GATEWAY
     fi
     _HandleStart "Gateway: $_gateway | IP: $_ipAddr | Subnet: $_netmask"
-    local changeStatis=$(powershell.exe /c "Start-Process powershell \
-      -verb RunAs -ArgumentList 'netsh interface ipv4 set address \
-      name=$device static $_ipAddr $_netmask $_gateway'")
+    local changeStatis=$(powershell.exe /c "& {Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set address name=$device static $_ipAddr $_netmask $_gateway'}")
     [[ $? -eq 0 ]] && _HandleResult "Complete change IP Configuration" && return 1 || \
       _HandleError "Failed change IP Configuration" && return 1
   fi
   if [[ $nextTYPE == "dhcp" && $nextOPT == "ip" ]]; then
     _HandleStart "Settings up IP DHCP"
-    local changeDHCP=$(powershell.exe /c "Start-Process powershell \
-    -verb RunAs -ArgumentList 'netsh interface ipv4 set address \
-    name=$device dhcp'")
+    local changeDHCP=$(powershell.exe /c "& {Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set address name=$device dhcp'}")
     [[ $? -eq 0 ]] && _HandleResult "Complete DHCP Setup" && return 1 || \
       _HandleError "Failed change" && return 1
   fi
@@ -511,18 +507,13 @@ function netChange(){
       esac
     done
     _HandleStart "Setting up DNS $dnsName"
-    local changeDNSSTATIC=$(powershell.exe /c "Start-Process \
-      powershell -verb RunAs -ArgumentList 'netsh interface \
-      ipv4 set dns name=$device static $dnsOne; \
-      netsh interface ipv4 add dns name=$device $dnsTwo index=2'")
+    local changeDNSSTATIC=$(powershell.exe /c "& {Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set dns name=$device static $dnsOne; netsh interface ipv4 add dns name=$device $dnsTwo index=2'}")
     [[ $? -eq 0 ]] && _HandleResult "Complete DNS Setup" && return 1 || \
       _HandleError "Failed change" && return 1
   fi
   if [[ $nextTYPE == "dhcp" && $nextOPT == "dns" ]]; then
     _HandleStart "Settings up DNS DHCP"
-    local changeDHCPDNS=$(powershell.exe /c "Start-Process \
-      powershell -verb RunAs -ArgumentList \
-      'netsh interface ipv4 set dns name=$device dhcp'")
+    local changeDHCPDNS=$(powershell.exe /c "& {Start-Process powershell -verb RunAs -ArgumentList 'netsh interface ipv4 set dns name=$device dhcp'}")
     [[ $? -eq 0 ]] && _HandleResult "Complete DHCP Setup" && return 1 || \
       _HandleError "Failed change" && return 1
   fi
@@ -737,10 +728,10 @@ function restartDNS(){
   if $_thisTermux; then
     _HandleWarn "$_notSupport" && return 1
   elif $_thisWin; then
-    _HandleStart "Restart DNS" && powershell.exe /c "ipconfig /flushdns" && return 1
+    _HandleStart "Restart DNS" && powershell.exe /c "&{ ipconfig /flushdns }" && return 0
   else
     for ___SYSTEMS___ in "ubuntu" "rhel" "fedora" "centos" "opensuse"; do
-      [[ $(command -v systemd-resolve) && "$_sysName" == "$___SYSTEMS___[@]" ]] && sudo systemd-resolve --flush-caches && return 1
+      [[ $(command -v systemd-resolve) && "$_sysName" == "$___SYSTEMS___[@]" ]] && sudo systemd-resolve --flush-caches && return 0
       break
     done
   fi
@@ -748,17 +739,17 @@ function restartDNS(){
 
 function speeds(){
   if $_thisTermux; then
-    [[ ! $(command -v speedtest-go) ]] && \
-      _checkingPackage -i speedtest-go -p speedtest-go || speedtest-go
+    [[ ! $(command -v speedtest-go) ]] &&
+      _checkingPackage -i speedtest-go -p speedtest-go && speedtest-go || speedtest-go
   else
-    [[ ! $(command -v speedtest) ]] && \
-    _checkingPackage -i speedtest-cli -p speedtest || speedtest
+    [[ ! $(command -v speedtest) ]] &&
+      _checkingPackage -i speedtest-cli -p speedtest && speedtest || speedtest
   fi
 }
 
 function fileBrowser(){
-  [[ ! $(command -v curl 2>/dev/null) ]] && _checkingPackage -i curl -p curl
-  [[ ! $(command -v bash 2>/dev/null) ]] && _checkingPackage -i bash -p bash
+  [[ ! $(command -v curl) ]] && _checkingPackage -i curl -p curl
+  [[ ! $(command -v bash) ]] && _checkingPackage -i bash -p bash
   if [[ ! $(command -v filebrowser 2>/dev/null) ]]; then
     _HandleStart "Install filebrowser"
     local getFileBrowser=$(curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash)
@@ -850,7 +841,7 @@ function dl_tools(){
       [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
     fi
   elif $_thisWin; then
-    local getUser=$(powershell.exe /c "[System.Environment]::UserName")
+    local getUser=$(powershell.exe /c "& {[System.Environment]::UserName}")
     local User=$(echo $getUser | tr -d '\r')
     local directoryDownloads="/mnt/c/Users/${User}/Downloads"
     if [[ ! $(command -v yt-dlp) ]]; then

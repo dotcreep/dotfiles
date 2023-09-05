@@ -38,6 +38,12 @@ Shortcut | Function
 `auruu` | AUR Upgrade
 `aurr` | AUR Remove
 
+**Maybe can useful**
+
+- Use `sysctl` for sysinit like systemd, service.
+- Use `ttmux` for termux assist command.
+- Use `dl_tools`, `image_tools`, `document_tools`, `media_tools` for productivity tools.
+- Use `installBundles` for installing devops tools and some package manager.
 
 # Update aliases v2 (BETA)
 - Rebuild from scratch
