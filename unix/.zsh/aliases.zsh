@@ -1383,6 +1383,7 @@ function installBundles(){
     fi
   }
   function install_bundles_aur(){
+    if $_thisTermux; then _HandleWarn "$_notSupport" && return 1; fi
     if [[ ! $(command -v yay) ]]; then
       [[ ! $(command -v git) ]] && _checkingPackage -i git
       installnc base-devel
