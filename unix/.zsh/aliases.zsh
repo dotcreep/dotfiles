@@ -838,7 +838,8 @@ function fileBrowser(){
     if [[ $(_processCheck filebrowser) ]]; then
       _HandleStart "Stopping filebrowser"
       local execute=$(killall filebrowser)
-      [[ $? -eq 0 && ! $(_processCheck filebrowser) ]] && _HandleResult "Program has been stopped" && return 0 || _HandleError "Failed stopping program" && return 1
+      [[ $? -eq 0 && ! $(_processCheck filebrowser) ]] && _HandleResult "Program has been stopped" && return 0 ||
+        _HandleError "Failed stopping program" && return 1
     else
       _HandleWarn "File Browser is not running. Try using option '-D' instead"
       return 0
@@ -874,11 +875,13 @@ function cloudTunnel(){
     echo "    -h                   Show this message"
     echo "    -r <TOKEN>           Running once"
     echo "    -s <TOKEN>           Installing service"
+    echo "    -S <PROGRAM>         Stopping cloudflared process"
   }
   local running=false 
   local boot=false 
   local service=false
-  while getopts ":r:b:s:h" opt; do
+  local end=false
+  while getopts ":r:b:s:Sh" opt; do
     case $opt in
       r)  running=true
           local token="$OPTARG" ;;
@@ -886,17 +889,29 @@ function cloudTunnel(){
           local token="$OPTARG" ;;
       s)  service=true
           local token="$OPTARG" ;;
+      S)  end=true ;;
       h) _cloudTunnel_usage; return 0;;
       \? ) _HandleError "Invalid option: -$OPTARG"; return 1;;
       : ) _HandleError "Option -$OPTARG requires an arguments"; return 1;;
     esac
   done
+  if $end && $running || $service; then _HandleError "Action denied" && return 1
   [[ $# -eq 0 ]] && _cloudTunnel_usage && return 0
   if $running; then
     _HandleStart "Run cloudflared tunnel"
-    cloudflared --no-autoupdate tunnel run --token $token > $HOME/.cloudflared.log 2>&1 &
+    if [[ $(_processCheck cloudflared) ]]; then
+      _HandleWarn "Cloudflared already running"
+      return 0
+    fi
+    local running=$(cloudflared --no-autoupdate tunnel run --token $token > $HOME/.cloudflared.log 2>&1 &)
     [[ $? -eq 0 ]] && _HandleResult "Success running tunnel" && return 0 ||
       _HandleError "Failed running tunnel" && return 1
+  elif $end; then
+    if [[ $(_processCheck cloudflared) ]]; then
+      _HandleStart "Stopping cloudflared"
+      local execute=$(killall cloudflared)
+      [[ $? -eq 0 && ! $(_processCheck cloudflared) ]] && _HandleResult "Program has been stopped" && return 0 ||
+        _HandleError "Failed stopping program" && return 1
   elif $boot; then
     [[ ! -d "$HOME/.termux/boot/" ]] && mkdir -p $HOME/.termux/boot
     _HandleStart "Installing boot service"
