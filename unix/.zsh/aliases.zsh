@@ -808,7 +808,7 @@ function fileBrowser(){
     echo "Options :"
     echo "------------------------------------------------"
     echo "    -a IP             Set the IP address to listen [Default: 0.0.0.0]"
-    echo "    -d DIR            Set the directory to serve [Default: '$HOME']"
+    echo "    -d DIR            Set the directory to server [Default: '/home/<user>']"
     echo "    -D                Active as daemon (Running on the background)"
     echo "    -h                Show this message"
     echo "    -p NUMBER         Set the port number [Default: 8080]"
@@ -1848,7 +1848,7 @@ function aliasHelp(){
   esac
 }
 
-alias i="install"
+alias i="instal l"
 alias u="update"
 alias uu="upgrade"
 alias uuu="updateupgrade"
