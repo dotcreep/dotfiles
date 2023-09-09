@@ -878,7 +878,7 @@ function cloudTunnel(){
   local running=false 
   local boot=false 
   local service=false
-  while getopts ":r:s:h" opt; do
+  while getopts ":r:b:s:h" opt; do
     case $opt in
       r)  running=true
           local token="$OPTARG" ;;
