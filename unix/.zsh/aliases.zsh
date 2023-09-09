@@ -913,14 +913,12 @@ function cloudTunnel(){
     [[ $? -eq 0 ]] && _HandleResult "Success running tunnel" && return 0 ||
       _HandleError "Failed running tunnel" && return 1
   elif $end; then
+    
     if [[ $(_processCheck cloudflared) ]]; then
       _HandleStart "Stopping cloudflared"
       local execute=$(killall cloudflared)
-      if [[ $? -eq 0 && ! $(_processCheck cloudflared) ]]; then
-        _HandleResult "Program has been stopped" && return 0
-      else
+      [[ $? -eq 0 && ! $(_processCheck cloudflared) ]] && _HandleResult "Program has been stopped" && return 0 ||
         _HandleError "Failed stopping program" && return 1
-      fi
     else
       _HandleWarn "Cloudflare is not running"
     fi
