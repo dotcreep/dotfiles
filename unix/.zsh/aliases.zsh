@@ -8,6 +8,10 @@ RESET="\e[0m"
 _notSupport="Sorry, your system is not supported."
 _comingSoon="Under Maintenance"
 
+function _found(){
+  [[ $1 ]] && command -v $1 && return 0
+}
+
 function _checkSystem(){
   _thisTermux=false
   _thisWin=false
@@ -28,7 +32,7 @@ function _checkSystem(){
       _packageManager="pacman"
     else
       for _checkPackage in pacman apk zypper xbps-install pkg yum dnf apt; do
-        [[ $(command -v $_checkPackage) ]] && _packageManager=$(basename $_checkPackage) && break;
+        [[ $(_found $_checkPackage) ]] && _packageManager=$(basename $_checkPackage) && break;
       done
     fi
   }
@@ -98,20 +102,16 @@ function _checkingPackage(){
   done
   [[ -z $code ]] && echo "Option install package ('-i') and optional package ('-p') is required" && return 0
   [[ -z $name ]] && name=$code
-  [[ ! $(command -v $name 2>/dev/null) ]] && _HandleWarn "$name not installed. Installing now!"
+  [[ ! $(_found $name) ]] && _HandleWarn "$name not installed. Installing now!"
   if [[ ! $(search $name 2>/dev/null) ]]; then
     _HandleError "$name is not found on the repository"
     return 1
   fi
   _HandleStart "Installing $code"
   local tryInstall=$(installnc $code &>/dev/null)
-  [[ $? -eq 0 && $(command -v $name) ]] && \
+  [[ $? -eq 0 && $(_found $name) ]] && \
     _HandleResult "Success installing $name" && return 0 || \
     _HandleError "Failed installing $name" && return 1
-}
-
-function _found(){
-  [[ $1 ]] && command -v $1 && return 0
 }
 
 function _processCheck(){
@@ -330,7 +330,7 @@ function holdpackage(){
 }
 
 # AUR
-if [[ $(command -v yay) ]]; then
+if [[ $(_found yay) ]]; then
   function auri() { yay -S $*; }
   function aurinc() { yay -S --noconfirm $*; }
   function auru() { yay -Sy $*; }
@@ -340,7 +340,7 @@ if [[ $(command -v yay) ]]; then
 fi
 
 # SNAP
-if [[ $(command -v snap) ]]; then
+if [[ $(_found snap) ]]; then
   function snapi() { sudo snap install $*; }
   function snapu() { sudo snap refresh $*; }
   function snapv() { sudo snap revert $*; }
@@ -355,8 +355,8 @@ fi
 ############################ NETTOOL #############################
 
 function myip(){
-  [[ ! $(command -v curl) ]] && _checkingPackage -i curl -p curl
-  if [[ ! $(command -v ip) ]]; then
+  [[ ! $(_found curl) ]] && _checkingPackage -i curl -p curl
+  if [[ ! $(_found ip) ]]; then
     if $_thisTermux; then
       [[ $(search iproute2 2>/dev/null) ]] && _checkingPackage -i iproute2 -p ip
     else
@@ -399,7 +399,7 @@ function myip(){
 }
 
 function getip(){
-  [[ ! $(command -v curl 2>/dev/null) ]] && _checkingPackage -i curl -p curl
+  [[ ! $(_found curl) ]] && _checkingPackage -i curl -p curl
   function _getip_usage(){
     echo "Usage : getip [options] <domain>";
     echo "------------------------------------------------"
@@ -423,7 +423,7 @@ function getip(){
   if [[ $net ]]; then
     if $lokal; then
       shift
-      [[ ! $(command -v dig 2>/dev/null) ]] && _checkingPackage -i dnsutils -p dig
+      [[ ! $(_found dig) ]] && _checkingPackage -i dnsutils -p dig
       for i in "$@"; do
         local execute=$(dig $i | awk '/^;; ANSWER SECTION:/{flag=1; next} /^;; /{flag=0} flag{print $NF}' | tr '\n' ',' | sed 's/,,$//' | sed 's/,/, /g')
         [[ $execute == "0.0.0.0" || $execute == "127.0.0.1" ]] && echo " - ${RED}$i${RESET} : Error Access or Blocked by Internal" || echo " - ${GREEN}$i${RESET} : $execute"
@@ -642,7 +642,7 @@ function proxyConnect(){
 }
 
 function sshConnect(){
-  [[ ! $(command -v ssh 2>/dev/null) ]] && _checkingPackage -i openssh -p ssh
+  [[ ! $(_found ssh) ]] && _checkingPackage -i openssh -p ssh
   file_config="$HOME/.sshconnectrc"
   [[ ! -f $file_config ]] && touch $file_config
   function _ssh_connect_usage() {
@@ -778,7 +778,7 @@ function restartDNS(){
     _HandleStart "Restart DNS" && powershell.exe /c "&{ ipconfig /flushdns }" && return 0
   else
     for ___SYSTEMS___ in "ubuntu" "rhel" "fedora" "centos" "opensuse"; do
-      [[ $(command -v systemd-resolve) && "$_sysName" == "$___SYSTEMS___[@]" ]] && sudo systemd-resolve --flush-caches && return 0
+      [[ $(_found systemd-resolve) && "$_sysName" == "$___SYSTEMS___[@]" ]] && sudo systemd-resolve --flush-caches && return 0
       break
     done
   fi
@@ -786,18 +786,18 @@ function restartDNS(){
 
 function speeds(){
   if $_thisTermux; then
-    [[ ! $(command -v speedtest-go) ]] &&
+    [[ ! $(_found speedtest-go) ]] &&
       _checkingPackage -i speedtest-go -p speedtest-go && speedtest-go || speedtest-go
   else
-    [[ ! $(command -v speedtest) ]] &&
+    [[ ! $(_found speedtest) ]] &&
       _checkingPackage -i speedtest-cli -p speedtest && speedtest || speedtest
   fi
 } 
 
 function fileBrowser(){
-  [[ ! $(command -v curl) ]] && _checkingPackage -i curl -p curl
-  [[ ! $(command -v bash) ]] && _checkingPackage -i bash -p bash
-  if [[ ! $(command -v filebrowser 2>/dev/null) ]]; then
+  [[ ! $(_found curl) ]] && _checkingPackage -i curl -p curl
+  [[ ! $(_found bash) ]] && _checkingPackage -i bash -p bash
+  if [[ ! $(_found filebrowser) ]]; then
     _HandleStart "Install filebrowser"
     local getFileBrowser=$(curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash)
     [[ $? -eq 0 && $(_found filebrowser) ]] && _HandleResult "Success installing filebrowser" && return 0 || _HandleError $getFileBrowser && return 1
@@ -960,7 +960,7 @@ function termux_tools(){
     case $opt in
       a ) nano $BOOT/$OPTARG; break;;
       b ) [[ ! -d $OPTARG ]] && _HandleError "Invalid directory" && return 1 && break
-          [[ ! $(command -v tar) ]] && _checkingPackage -i tar
+          [[ ! $(_found tar) ]] && _checkingPackage -i tar
           _HandleStart "Backup termux"
           local files="$OPTARG/$(date +"%Y-%m-%d_%H:%M").tar.gz"
           local archive=$(tar -zcf $files -C /data/data/com.termux/files ./home ./usr)
@@ -987,23 +987,23 @@ function termux_tools(){
 }
 
 function dl_tools(){
-  [[ ! $(command -v wget) ]] && _checkingPackage -i wget
+  [[ ! $(_found wget) ]] && _checkingPackage -i wget
   local directoryDownloads=""
   if $_thisTermux; then
     local directoryDownloads="/sdcard/Download"
-    if [[ ! $(command -v yt-dlp) ]]; then
+    if [[ ! $(_found yt-dlp) ]]; then
       _HandleStart "Installing youtube-dl"
       local process=$(wget -qq https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O $PREFIX/bin/yt-dlp && chmod a+rx $PREFIX/bin/yt-dlp)
-      [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
+      [[ $? -eq 0 && $(_found yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
     fi
   elif $_thisWin; then
     local getUser=$(powershell.exe /c "& {[System.Environment]::UserName}")
     local User=$(echo $getUser | tr -d '\r')
     local directoryDownloads="/mnt/c/Users/${User}/Downloads"
-    if [[ ! $(command -v yt-dlp) ]]; then
+    if [[ ! $(_found yt-dlp) ]]; then
       _HandleStart "Installing youtube-dl"
       local process=$(sudo wget -qq https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/bin/yt-dlp && sudo chmod a+rx /usr/bin/yt-dlp)
-      [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
+      [[ $? -eq 0 && $(_found yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
     fi
   elif $_thisLinux; then
     if [[ ! -d "$HOME/Downloads" ]]; then
@@ -1012,10 +1012,10 @@ function dl_tools(){
     else
       local directoryDownloads="$HOME/Downloads"
     fi
-    if [[ ! $(command -v yt-dlp) ]]; then
+    if [[ ! $(_found yt-dlp) ]]; then
       _HandleStart "Installing youtube-dl"
       local process=$(sudo wget -qq https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O /usr/bin/yt-dlp && sudo chmod a+rx /usr/bin/yt-dlp)
-      [[ $? -eq 0 && $(command -v yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
+      [[ $? -eq 0 && $(_found yt-dlp) ]] && _HandleResult "Success installing youtube-dl" && return 0 || _HandleError "Failed installing youtube-dl" && return 1
     fi
   else
     _HandleWarn "$_notSupport" && return 1
@@ -1061,7 +1061,7 @@ function dl_tools(){
 }
 
 function git_tools(){
-  [[ ! $(command -v git) ]] && _checkingPackage -i git
+  [[ ! $(_found git) ]] && _checkingPackage -i git
   function _git_tools_usage(){
     echo "Usage: git_tools [options] <path/file>"
     echo ""
@@ -1101,8 +1101,8 @@ function git_tools(){
 }
 
 function image_tools(){
-  [[ ! $(command -v convert) ]] && _checkingPackage -i imagemagick -p convert
-  if [[ ! $(command -v cwebp) ]]; then
+  [[ ! $(_found convert) ]] && _checkingPackage -i imagemagick -p convert
+  if [[ ! $(_found cwebp) ]]; then
     local search=$(search webp 2>/dev/null)
     for pkg in "libwebp-tools" "webp"; do
       if [[ $(echo $search | grep "$pkg") ]]; then
@@ -1116,7 +1116,7 @@ function image_tools(){
       fi
     done
   fi
-  [[ ! $(command -v potrace) ]] && _checkingPackage -i potrace
+  [[ ! $(_found potrace) ]] && _checkingPackage -i potrace
   local imageExtension="3fr arw avif bmp cr2 crw cur dcm dcr dds dng \
     erf exr fax fts g3 g4 gif gv hdr heic heif hrz ico iiq ipl \
     jbg jbig jfi jfif jif jnx jp2 jpe jpeg jpg jps k25 kdc mac \
@@ -1214,10 +1214,10 @@ function image_tools(){
 }
 
 function document_tools(){
-  [[ ! $(command -v pandoc) ]] && _checkingPackage -i pandoc
-  [[ ! $(command -v gs) ]] && _checkingPackage -i ghostscript
-  [[ ! $(command -v pdftk) ]] && _checkingPackage -i pdftk
-  [[ ! $(command -v pandoc) || ! $(command -v gs) || ! $(command -v pdftk) ]] && \
+  [[ ! $(_found pandoc) ]] && _checkingPackage -i pandoc
+  [[ ! $(_found gs) ]] && _checkingPackage -i ghostscript
+  [[ ! $(_found pdftk) ]] && _checkingPackage -i pdftk
+  [[ ! $(_found pandoc) || ! $(_found gs) || ! $(_found pdftk) ]] && \
     _HandleError "Need some dependencies, run 'documment_tools' again!" && return 1
   local docExtension=("abw" "aw" "csv" "dbk" "djvu" "doc" "docm" "docx" \
     "dot" "dotm" "dotx" "html" "kwd" "odt" "oxps" "pdf" "rtf" \
@@ -1287,7 +1287,7 @@ function document_tools(){
 }
 
 function media_tools(){
-  [[ ! $(command -v ffmpeg) ]] && _checkingPackage -i ffmpeg
+  [[ ! $(_found ffmpeg) ]] && _checkingPackage -i ffmpeg
   function _media_tools_usage(){
     echo "Usage  : media_tools [OPTION] <format>"
     echo ""
@@ -1408,7 +1408,7 @@ function installBundles(){
       [[ $? -ne 0 ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 1
     }
     function ___CHECK__DOCKER___(){
-      [[ $(command -v docker) ]] && _HandleResult "Already installed" && return 0
+      [[ $(_found docker) ]] && _HandleResult "Already installed" && return 0
     }
     if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
       ___CHECK__DOCKER___
@@ -1445,7 +1445,7 @@ function installBundles(){
   }
   function install_bundles_kubernetes_adm(){
     if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
-    [[ $(command -v kubeadm) ]] && _HandleResult "Already installed" && return 0
+    [[ $(_found kubeadm) ]] && _HandleResult "Already installed" && return 0
     if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
       _HandleStart "Install dependency"
       local stepone=$(update && installnc apt-transport-https ca-certificates curl)
@@ -1495,7 +1495,7 @@ function installBundles(){
   }
   function install_bundles_minikube(){
     if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
-    [[ $(command -v kubectl) ]] && _HandleResult "Already installed" && return 0
+    [[ $(_found kubectl) ]] && _HandleResult "Already installed" && return 0
     if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
       _HandleStart "Install minikube"
       local steps=$(curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
@@ -1518,7 +1518,7 @@ function installBundles(){
     fi
   }
   function install_bundles_cloudflared(){
-    [[ $(command -v cloudflared) ]] && _HandleResult "Already installed" && return 0
+    [[ $(_found cloudflared) ]] && _HandleResult "Already installed" && return 0
     if [[ $(search cloudflared &>/dev/null | grep "cloudflared") ]]; then
       _checkingPackage -i cloudflared
     else
@@ -1534,7 +1534,7 @@ function installBundles(){
         else
           _HandleWarn "$_notSupport" && return 1
         fi
-        [[ $? -eq 0 && $(command -v cloudflared) ]] && _HandleResult "Success installing cloudflared" && return 0 || \
+        [[ $? -eq 0 && $(_found cloudflared) ]] && _HandleResult "Success installing cloudflared" && return 0 || \
           _HandleError "Failed installing cloudflared" && return 1
       }
       case $_sysArch in
@@ -1548,9 +1548,9 @@ function installBundles(){
   }
   function install_bundles_snap(){
     if $_thisTermux; then _HandleWarn "$_notSupport" && return 1; fi
-    [[ ! $(command -v sudo) ]] && _checkingPackage -i sudo
-    [[ $(command -v usermod) ]] && sudo usermod -G wheel $USER
-    if [[ ! $(command -v snap) ]]; then
+    [[ ! $(_found sudo) ]] && _checkingPackage -i sudo
+    [[ $(_found usermod) ]] && sudo usermod -G wheel $USER
+    if [[ ! $(_found snap) ]]; then
       _HandleStart "Installing snap to system"
       if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
         update && installnc snapd
@@ -1574,8 +1574,8 @@ function installBundles(){
   }
   function install_bundles_aur(){
     if $_thisTermux; then _HandleWarn "$_notSupport" && return 1; fi
-    if [[ ! $(command -v yay) ]]; then
-      [[ ! $(command -v git) ]] && _checkingPackage -i git
+    if [[ ! $(_found yay) ]]; then
+      [[ ! $(_found git) ]] && _checkingPackage -i git
       installnc base-devel
       cd /opt
       git clone https://aur.archlinux.org/yay.git
@@ -1622,14 +1622,14 @@ function play(){
   done
   
   if [[ $playGame == "2048" ]]; then
-    [[ ! $(command -v gcc) ]] && _checkingPackage -i clang -p gcc
-    [[ ! $(command -v wget) ]] && _checkingPackage -i wget 
+    [[ ! $(_found gcc) ]] && _checkingPackage -i clang -p gcc
+    [[ ! $(_found wget) ]] && _checkingPackage -i wget 
     wget -q https://raw.githubusercontent.com/mevdschee/2048.c/master/2048.c
     gcc -o $PREFIX/bin/2048 2048.c
     chmod +x $PREFIX/bin/2048
     rm 2048.c
   fi
-  if [[ ! $(command -v $playGame) ]]; then
+  if [[ ! $(_found $playGame) ]]; then
     _checkingPackage -i $nameGame -p $nameGame
     [[ $? -eq 0 ]] && $playGame || return 1
   else
@@ -1639,16 +1639,16 @@ function play(){
 
 function sysctl(){
   if $_thisTermux; then
-    [[ ! $(command -v sv) ]] && _checkingPackage -i termux-services
+    [[ ! $(_found sv) ]] && _checkingPackage -i termux-services
     _sysService="sv"
-  elif $_thisWin && [[ $(command -v service) ]]; then
+  elif $_thisWin && [[ $(_found service) ]]; then
     _sysService="service"
   else
-    if [[ $(command -v systemctl) ]]; then
+    if [[ $(_found systemctl) ]]; then
       _sysService="systemctl"
-    elif [[ $(command -v service) ]]; then
+    elif [[ $(_found service) ]]; then
       _sysService="service"
-    elif [[ $(command -v sv) ]]; then
+    elif [[ $(_found sv) ]]; then
       _sysService="sv"
     else
       _sysService=""
@@ -1717,7 +1717,7 @@ function sysctl(){
 }
 
 function ls(){
-  [[ ! $(command -v exa) ]] && _checkingPackage -i exa -p exa && exa --icons --group-directories-first $* || exa --icons --group-directories-first $*
+  [[ ! $(_found exa) ]] && _checkingPackage -i exa -p exa && exa --icons --group-directories-first $* || exa --icons --group-directories-first $*
 }
 
 function aliasHelp(){
