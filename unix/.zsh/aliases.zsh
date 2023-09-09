@@ -865,7 +865,10 @@ function cloudTunnel(){
     echo "Follow instruction on the Official Cloudflare: https://one.dash.cloudflare.com/"
     return 1
   fi
-  if [[ ! $(_found cloudflared) ]]; then _HandleWarn "Install cloudflared first. Try running 'installBundles' and follow instructions." && return 1; fi
+  if [[ ! $(_found cloudflared) ]]; then
+    _HandleWarn "Install cloudflared first. Try running 'installBundles' and follow instructions."
+    return 1
+  fi
   function _cloudTunnel_usage(){
     echo "Usage: cloudTunnel [options] <token>"
     echo ""
@@ -915,6 +918,7 @@ function cloudTunnel(){
       local execute=$(killall cloudflared)
       [[ $? -eq 0 && ! $(_processCheck cloudflared) ]] && _HandleResult "Program has been stopped" && return 0 ||
         _HandleError "Failed stopping program" && return 1
+    fi
   elif $boot; then
     [[ ! -d "$HOME/.termux/boot/" ]] && mkdir -p $HOME/.termux/boot
     _HandleStart "Installing boot service"
