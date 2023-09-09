@@ -875,15 +875,17 @@ function cloudTunnel(){
     echo "    -r <TOKEN>           Running once"
     echo "    -s <TOKEN>           Installing service"
   }
-  local running=false boot=false
+  local running=false 
+  local boot=false 
+  local service=false
   while getopts ":r:s:h" opt; do
     case $opt in
       r)  running=true
-          token="$OPTARG" ;;
+          local token="$OPTARG" ;;
       b)  boot=true
-          token="$OPTARG" ;;
+          local token="$OPTARG" ;;
       s)  service=true
-          token="$OPTARG" ;;
+          local token="$OPTARG" ;;
       h) _cloudTunnel_usage; return 0;;
       \? ) _HandleError "Invalid option: -$OPTARG"; return 1;;
       : ) _HandleError "Option -$OPTARG requires an arguments"; return 1;;
