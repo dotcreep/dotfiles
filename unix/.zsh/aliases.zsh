@@ -895,7 +895,10 @@ function cloudTunnel(){
       : ) _HandleError "Option -$OPTARG requires an arguments"; return 1;;
     esac
   done
-  if $end && $running || $service; then _HandleError "Action denied" && return 1
+  if $end && $running || $service; then
+    _HandleError "Action denied"
+    return 1
+  fi
   [[ $# -eq 0 ]] && _cloudTunnel_usage && return 0
   if $running; then
     _HandleStart "Run cloudflared tunnel"
