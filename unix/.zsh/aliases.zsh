@@ -110,8 +110,16 @@ function _checkingPackage(){
     _HandleError "Failed installing $name" && return 1
 }
 
+function _found(){
+  [[ $1 ]] && command -v $1 && return 0
+}
+
 function install(){
   [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt|dnf|yum|pkg|zypper) sudo $_packageManager install $*;;
     pacman|xbps-install) sudo $_packageManager -S $*;;
@@ -122,6 +130,10 @@ function install(){
 
 function installnc(){
   [[ $_systemType == "termux" ]] && $_packageManager install $* -y && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt|dnf|yum|pkg|zypper) sudo $_packageManager install -y $*;;
     pacman) sudo $_packageManager -S --noconfirm $*;;
@@ -133,6 +145,10 @@ function installnc(){
 
 function update(){
   [[ $_systemType == "termux" ]] && $_packageManager update && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt|apk|pkg) sudo $_packageManager update;;
     pacman) sudo $_packageManager -Syu;;
@@ -144,6 +160,10 @@ function update(){
 
 function upgrade(){
   [[ $_systemType == "termux" ]] && $_packageManager upgrade && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     pacman) sudo $_packageManager -Syu;;
     xbps-install) sudo $_packageManager -Su;;
@@ -155,6 +175,10 @@ function upgrade(){
 
 function remove(){
   [[ $_systemType == "termux" ]] && $_packageManager uninstall $* && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     pkg|apt|zypper|dnf|yum) sudo $_packageManager remove $*;;
     pacman) sudo $_packageManager -R $*;;
@@ -166,6 +190,10 @@ function remove(){
 
 function search(){
   [[ $_systemType == "termux" ]] && $_packageManager search $* && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt|zypper|apk|pkg|dnf|yum) $_packageManager search $*;;
     xbps-install) xbps-query -Rs $*;;
@@ -175,8 +203,12 @@ function search(){
 }
 
 function orphan(){
-  [[ $_systemType == "termux" ]] && $_packageManager autoremove && \
+  [[ $_systemType == "termux" ]] && $_packageManager autoremove &&
     $_packageManager autoclean && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt|apk|pkg|dnf|yum) sudo $_packageManager autoremove;;
     pacman) sudo $_packageManager -Rns $(pacman -Qtdq);;
@@ -188,6 +220,10 @@ function orphan(){
 
 function reinstall(){
   [[ $_systemType == "termux" ]] && $_packageManager reinstall $* && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     pacman) sudo $_packageManager -S --needed $*;;
     zypper) sudo $_packageManager in -f $*;;
@@ -201,8 +237,12 @@ function reinstall(){
 }
 
 function updateupgrade(){
-  [[ $_systemType == "termux" ]] && $_packageManager update && \
+  [[ $_systemType == "termux" ]] && $_packageManager update &&
     $_packageManager upgrade && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt) sudo $_packageManager update && sudo $_packageManager upgrade -y;;
     apk) sudo $_packageManager update && sudo $_packageManager upgrade;;
@@ -216,6 +256,10 @@ function updateupgrade(){
 
 function detail(){
   [[ $_systemType == "termux" ]] && $_packageManager show $* && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt) $_packageManager show $*;;
     pacman) $_packageManager -Si $*;;
@@ -228,6 +272,10 @@ function detail(){
 
 function checkpackage(){
   [[ $_systemType == "termux" ]] && echo $_notSupport && return 1
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt) dpkg -C;;
     pacman) $_packageManager -Qkk;;
@@ -240,6 +288,10 @@ function checkpackage(){
 
 function listpackage(){
   [[ $_systemType == "termux" ]] && $_packageManager list-installed && return 0
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt) dpkg --list;;
     pacman) $_packageManager -Q;;
@@ -253,6 +305,10 @@ function listpackage(){
 
 function holdpackage(){
   [[ $_systemType == "termux" ]] && echo $_notSupport && return 1
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need a package argument"
+    return 1
+  fi
   case $_packageManager in
     apt) sudo apt-mark hold $*;;
     pacman) sudo $_packageManager -D $*;;
@@ -265,6 +321,10 @@ function holdpackage(){
 
 # AUR
 if [[ $(command -v yay) ]]; then
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need an argument"
+    return 1
+  fi
   function auri() { yay -S $*; }
   function aurinc() { yay -S --noconfirm $*; }
   function auru() { yay -Sy $*; }
@@ -275,6 +335,10 @@ fi
 
 # SNAP
 if [[ $(command -v snap) ]]; then
+  if [[ $# -eq 0 ]]; then
+    _HandleError "Need an argument"
+    return 1
+  fi
   function snapi() { sudo snap install $*; }
   function snapu() { sudo snap refresh $*; }
   function snapv() { sudo snap revert $*; }
@@ -730,7 +794,7 @@ function fileBrowser(){
   if [[ ! $(command -v filebrowser 2>/dev/null) ]]; then
     _HandleStart "Install filebrowser"
     local getFileBrowser=$(curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash)
-    [[ $? -eq 0 ]] && _HandleResult "Success installing filebrowser" && return 0 || _HandleError $getFileBrowser && return 1
+    [[ $? -eq 0 && $(_found filebrowser) ]] && _HandleResult "Success installing filebrowser" && return 0 || _HandleError $getFileBrowser && return 1
   fi
   function _file_browser_usage(){
     echo "Usage: fileBrowser [options]"
