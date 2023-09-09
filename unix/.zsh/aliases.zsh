@@ -114,6 +114,16 @@ function _found(){
   [[ $1 ]] && command -v $1 && return 0
 }
 
+function _processCheck(){
+  if [[ $(_found pgrep) ]]; then
+    pgrep $1 && return 0
+  elif [[ $(_found ps) ]]; then
+    ps aux | grep $1 && return 0
+  elif [[ $(_found pidof) ]]; then
+    pidof $1
+  fi
+}
+
 function install(){
   [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
   if [[ $# -eq 0 ]]; then
@@ -321,10 +331,6 @@ function holdpackage(){
 
 # AUR
 if [[ $(command -v yay) ]]; then
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need an argument"
-    return 1
-  fi
   function auri() { yay -S $*; }
   function aurinc() { yay -S --noconfirm $*; }
   function auru() { yay -Sy $*; }
@@ -335,10 +341,6 @@ fi
 
 # SNAP
 if [[ $(command -v snap) ]]; then
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need an argument"
-    return 1
-  fi
   function snapi() { sudo snap install $*; }
   function snapu() { sudo snap refresh $*; }
   function snapv() { sudo snap revert $*; }
@@ -786,7 +788,7 @@ function speeds(){
     [[ ! $(command -v speedtest) ]] &&
       _checkingPackage -i speedtest-cli -p speedtest && speedtest || speedtest
   fi
-}
+} 
 
 function fileBrowser(){
   [[ ! $(command -v curl) ]] && _checkingPackage -i curl -p curl
@@ -803,22 +805,52 @@ function fileBrowser(){
     echo "------------------------------------------------"
     echo "    -a IP             Set the IP address to listen [Default: 0.0.0.0]"
     echo "    -d DIR            Set the directory to serve [Default: '$HOME']"
+    echo "    -D                Active as daemon (Running on the background)"
     echo "    -h                Show this message"
     echo "    -p NUMBER         Set the port number [Default: 8080]"
+    echo "    -s                Stop filebrowser from daemon"
   }
-  while getopts ":p:d:a:h" option; do
+  local daemon=false stop=false
+  while getopts ":p:d:a:Dsh" option; do
     case "$option" in
-      a)  addr="$OPTARG" ;;
-      p)  port="$OPTARG" ;;
-      d)  dirs="$OPTARG" ;;
+      a)  local addr="$OPTARG" ;;
+      p)  local port="$OPTARG" ;;
+      d)  local dirs="$OPTARG" ;;
+      D)  daemon=true ;;
+      s)  stop=true ;;
       h)  _file_browser_usage; return 1;;
       \?) _HandleWarn "Invalid option: -$OPTARG"; return 1;;
+      : ) return 1;;
     esac
   done
   [[ -z $addr ]] && addr="0.0.0.0"
   [[ -z $port ]] && port="8080"
   [[ -z $dirs ]] && dirs="$HOME"
-  filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
+  if $stop && $daemon; then
+    _HandleError "Cannot running concurrently on options '-s' and '-D'!"
+    return 1
+  fi
+  if $stop; then
+    if [[ $(_processCheck filebrowser) ]]; then
+      _HandleStart "Stopping filebrowser"
+      local execute=$(killall filebrowser)
+      [[ $? -eq 0 && ! $(_processCheck filebrowser) ]] && _HandleResult "Program has been stopped" && return 0 || _HandleError "Failed stopping program" && return 1
+    else
+      _HandleWarn "File Browser is not running. Try using option '-D' instead"
+      return 0
+    fi
+  fi
+  if [[ $(_processCheck filebrowser) ]]; then
+    _HandleWarn "Program already running"
+    return 0
+  fi
+  if $daemon; then
+    _HandleStart "Running as daemon"
+    local runProgram=$(filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs" > $HOME/.fileBrowser.log 2>&1 &)
+    [[ $? -eq 0 ]] && _HandleResult "Success running on the background"
+  else
+    filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
+  fi  
 }
 
 ########################### END NETTOOL ###########################
@@ -1115,7 +1147,7 @@ function document_tools(){
     echo "    -c        Convert document mode"
     echo "    -e        Extension"
     echo "    -h        Show this message"
-    echo "    -m        Merge PDF mode"
+    echo "    -m        Merge PDF mode (all existed pdf)"
     echo "    -o        Target output file"
   }
   local __merge=false __convert=false
