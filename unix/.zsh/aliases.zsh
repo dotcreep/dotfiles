@@ -645,7 +645,7 @@ function sshConnect(){
   [[ ! $(command -v ssh 2>/dev/null) ]] && _checkingPackage -i openssh -p ssh
   file_config="$HOME/.sshconnectrc"
   [[ ! -f $file_config ]] && touch $file_config
-  function ssh_connect_usage() {
+  function _ssh_connect_usage() {
     echo "Usage: sshConnect [options]"
     echo ""
     echo "Options :"
@@ -659,9 +659,14 @@ function sshConnect(){
     echo "    -s          Show all ssh account"
   }
   function check_ssh_connect(){
-    [[ ! $(cat $file_config) ]] && _HandleError "Account list is empty" && return 1 || return 0
+    if [[ ! $(cat $file_config) ]]; then
+      _HandleError "Account list is empty" && return 1
+    fi
   }
-  [[ $# -eq 0 ]] && ssh_connect_usage && return 0
+  if [[ $# -eq 0 ]]; then
+    _ssh_connect_usage
+    return 0
+  fi
   while getopts ":a:k:Ksdch" opt; do
     case $opt in
       a ) [[ $OPTARG =~ '^[^@]+@[^@]+$' ]] && echo $OPTARG >> $file_config 2>/dev/null || _HandleError "Input must be user@hostname only"
@@ -759,10 +764,9 @@ function sshConnect(){
         ssh $account_ssh -p $port $socks -o $chiper -o $keax -o $macs -o $hka 2>/dev/null
         [[ $? -ne 0 ]] && _HandleError "Unable connect to server"
         break;;
-      h ) ssh_connect_usage && break;;
-      \? ) _HandleError "Invalid option: -$OPTARG"; break;;
-      : ) _HandleError "Option -$OPTARG requires an ssh account"; break;;
-      *) _HandleWarn "Invalid command"; break;;
+      h ) ssh_connect_usage && return 0;;
+      \? ) _HandleError "Invalid option: -$OPTARG"; return 1;;
+      : ) _HandleError "Option -$OPTARG requires an ssh account"; return 1;;
     esac
   done
 }
@@ -853,6 +857,54 @@ function fileBrowser(){
   fi  
 }
 
+function cloudTunnel(){
+  if ! $_thisTermux; then
+    _HandleError "$_notSupport"
+    echo "Follow instruction on the Official Cloudflare: https://one.dash.cloudflare.com/"
+    return 1
+  fi
+  if [[ ! $(_found cloudflared) ]]; then _HandleWarn "Install cloudflared first. Try running 'installBundles' and follow instructions." && return 1; fi
+  function _cloudTunnel_usage(){
+    echo "Usage: cloudTunnel [options] <token>"
+    echo ""
+    echo "Options :"
+    echo "------------------------------------------------"
+    echo "    -b <TOKEN>           Run on boot"
+    echo "    -h                   Show this message"
+    echo "    -r <TOKEN>           Running once"
+    echo "    -s <TOKEN>           Installing service"
+  }
+  local running=false boot=false
+  while getopts ":r:s:h" opt; do
+    case $opt in
+      r)  running=true
+          token="$OPTARG" ;;
+      b)  boot=true
+          token="$OPTARG" ;;
+      s)  service=true
+          token="$OPTARG" ;;
+      h) _cloudTunnel_usage; return 0;;
+      \? ) _HandleError "Invalid option: -$OPTARG"; return 1;;
+      : ) _HandleError "Option -$OPTARG requires an arguments"; return 1;;
+    esac
+  done
+  [[ $# -eq 0 ]] && _cloudTunnel_usage && return 0
+  if $running; then
+    cloudflared --no-autoupdate tunnel run --token $token
+  elif $boot; then
+    [[ ! -d "$HOME/.termux/boot/" ]] && mkdir -p $HOME/.termux/boot
+    _HandleStart "Installing boot service"
+    echo -ne "#!/data/data/com.termux/files/usr/bin/sh\ntermux-wake-lock\ncloudflared --no-autoupdate tunnel run --token $token" \
+      $HOME/.termux/boot/cloudflared
+    chmod +x $HOME/.termux/boot/cloudflared
+    [[ $? -eq 0 && -f "$HOME/.termux/boot/cloudflared" ]] && _HandleResult "Success added autostart on boot" && return 0 ||
+      _HandleError "Failed running on boot" && return 1
+  elif $service; then
+    echo "Coomingsoon"
+    return 0
+  fi
+}
+
 ########################### END NETTOOL ###########################
 ############################## TOOLS ##############################
 function termux_tools(){
@@ -897,10 +949,12 @@ function termux_tools(){
       S ) install science-repo; break;;
       G ) install game-repo; break;;
       X ) install x11-repo; break;;
-      \?) _HandleWarn "Invalid option" >&2; break;;
-      : ) _HandleError "Option '-$OPTARG' requires a argument" >&2; break;;
+      h ) _termux_tools_usage; return 0;;
+      \?) _HandleWarn "Invalid option" >&2; return 1;;
+      : ) _HandleError "Option '-$OPTARG' requires a argument" >&2; return 1;;
     esac
   done
+  [[ $# -eq 0 ]] && _termux_tools_usage && return 0
 }
 
 function dl_tools(){
