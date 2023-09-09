@@ -1734,6 +1734,7 @@ function aliasHelp(){
     echo "    restartDNS      Restart DNS"
     echo "    speeds          Speedtest"
     echo "    fileBrowser     File sharing based browser"
+    echo "    cloudTunnel     Cloudflared Tunnel management for termux"
   }
   function __REGULAR_TOOLS__(){
     if $_thisTermux; then echo "    termux_tools    Termux tools"; fi
@@ -1770,6 +1771,7 @@ function aliasHelp(){
     echo "    rdns            Restart DNS"
     echo "    spd             Speedtest"
     echo "    fbw             File sharing based browser"
+    echo "    ct              Cloudflared Tunnel management for termux"
   }
   function __GIT_TOOLS_MINI__(){
     echo "    gpull           Git pull"
@@ -1865,6 +1867,7 @@ alias sc="sshConnect"
 alias rdns="restartDNS"
 alias spd="speeds"
 alias fbw="fileBrowser"
+alias ct="cloudTunnel"
 
 alias gpull="git_tools -p"
 alias gpush="git_tools -P"
