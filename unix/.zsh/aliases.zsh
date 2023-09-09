@@ -893,7 +893,10 @@ function cloudTunnel(){
   done
   [[ $# -eq 0 ]] && _cloudTunnel_usage && return 0
   if $running; then
-    cloudflared --no-autoupdate tunnel run --token $token
+    _HandleStart "Run cloudflared tunnel"
+    cloudflared --no-autoupdate tunnel run --token $token > $HOME/.cloudflared.log 2>&1 &
+    [[ $? -eq 0 ]] && _HandleResult "Success running tunnel" && return 0 ||
+      _HandleError "Failed running tunnel" && return 1
   elif $boot; then
     [[ ! -d "$HOME/.termux/boot/" ]] && mkdir -p $HOME/.termux/boot
     _HandleStart "Installing boot service"
