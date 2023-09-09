@@ -1847,7 +1847,7 @@ function aliasHelp(){
     case $opt in
       "h" ) local helper="$OPTARG" && break ;;
       \? ) _HandleError "Invalid option '-$OPTARG'" >&2;;
-      : ) _HandleWarn "Option -$OPTARG requires an argument. Try 'aliasHelp -h example'." >&2;;
+      : ) __EXAMPLE__; return 0;;
     esac
   done
   [[ $# -eq 0 ]] && __EXAMPLE__ && return 1
