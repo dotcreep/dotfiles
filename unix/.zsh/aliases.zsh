@@ -1850,7 +1850,6 @@ function aliasHelp(){
       : ) __EXAMPLE__; return 0;;
     esac
   done
-  [[ $# -eq 0 ]] && __EXAMPLE__ && return 1
   [[ -z $helper || ! $helper ]] && return 1
   function _template(){
     echo "Helper Aliases from ${CYAN}$1${RESET}"
