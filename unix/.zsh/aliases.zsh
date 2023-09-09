@@ -730,7 +730,7 @@ function fileBrowser(){
   if [[ ! $(command -v filebrowser 2>/dev/null) ]]; then
     _HandleStart "Install filebrowser"
     local getFileBrowser=$(curl -fsSL https://raw.githubusercontent.com/filebrowser/get/master/get.sh | bash)
-    [[ $? -eq 0 ]] && _HandleResult "Success installing filebrowser" || _HandleError $getFileBrowser
+    [[ $? -eq 0 ]] && _HandleResult "Success installing filebrowser" && return 0 || _HandleError $getFileBrowser && return 1
   fi
   function _file_browser_usage(){
     echo "Usage: fileBrowser [options]"
@@ -963,14 +963,14 @@ function image_tools(){
       s ) local sourceImage=$OPTARG;;
       t ) local target=$OPTARG;;
       c ) local compress=true;;
-      h ) _image_tools_usage; break;;
+      h ) _image_tools_usage; return 0;;
       \?) _HandleWarn "Invalid option" >&2; return 1; break;;
       : ) _HandleError "Option '-$OPTARG' requires" >&2; return 1; break;;
     esac
   done
   [[ $# -eq 0 ]] && _image_tools_usage && return 0
   if [[ $imageExtension =~ (^|[[:space:]])$sourceImage($|[[:space:]]) && ! $compress ]]; then
-    [[ ! $target =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]] && _HandleError "Invalid target" && return 1
+    [[ ! $target =~ '^(webp|jpg|jpeg|png|svg|ico)$' ]] && _HandleError "Invalid target" && return 1
     local allImage=$(find ./ -maxdepth 1 -type f -name "*.$sourceImage" | awk -F'/' '{printf "\"%s\" ", $NF}' | sed 's/,$//')
     [[ -z $allImage ]] && _HandleError "sourceImage image not exists" && return 1
     for images in $allImage; do
@@ -992,7 +992,7 @@ function image_tools(){
     done
   elif [[ ! $imageExtension =~ (^|[[:space:]])$sourceImage($|[[:space:]]) && ! $compress ]]; then
     [[ ! -f $sourceImage ]] && _HandleError "sourceImage image not exists" && return 1
-    [[ $target =~ ^(webp|jpg|jpeg|png|svg|ico)$ ]] && local output="${sourceImage%.*}.$target" || \
+    [[ $target =~ '^(webp|jpg|jpeg|png|svg|ico)$' ]] && local output="${sourceImage%.*}.$target" || \
       local output="$target"
     _HandleStart "Convert $sourceImage to $output"
     if [[ ${output##*.} == "ico" ]]; then
@@ -1008,7 +1008,7 @@ function image_tools(){
     [[ $? -eq 0 && -f $output ]] && _HandleResult "Convert '$sourceImage' to '$output' success" && \
        return 0 || _HandleError "Failed converting '$sourceImage'" && return 1
   elif [[ $compress ]]; then
-    if [[ ! $sourceImage =~ ^(jpg|jpeg|png|gif|bmp|tiff|tif|webp|jp2)$ ]]; then
+    if [[ ! $sourceImage =~ '^(jpg|jpeg|png|gif|bmp|tiff|tif|webp|jp2)$' ]]; then
       [[ ! -f $sourceImage ]] && _HandleError "sourceImage image not exists" && return 1
       local nameImage=${sourceImage%.*}
       local extImage=${sourceImage##*.}
@@ -1018,7 +1018,7 @@ function image_tools(){
       local processing=$(convert $sourceImage -compress Zip -quality 60 "$output")
       [[ $? -eq 0 ]] && _HandleResult "Success compressing to '$output'" && return 0 || \
         _HandleError "Failed compressing '$sourceImage'" && return 1
-    elif [[ $sourceImage =~ ^(jpg|jpeg|png|gif|bmp|tiff|tif|webp|jp2)$ ]]; then
+    elif [[ $sourceImage =~ '^(jpg|jpeg|png|gif|bmp|tiff|tif|webp|jp2)$' ]]; then
       find ./ -maxdepth 1 -type f -name "*.$sourceImage" | while IFS= read -r select; do
         [[ -z $select || ! $select ]] && _HandleError "Source image not exists" && return 1
         local nameImage=${select%.*}
@@ -1043,8 +1043,18 @@ function document_tools(){
   local docExtension=("abw" "aw" "csv" "dbk" "djvu" "doc" "docm" "docx" \
     "dot" "dotm" "dotx" "html" "kwd" "odt" "oxps" "pdf" "rtf" \
     "sxw" "txt" "wps" "xls" "xlsx" "xps")
-  
-  local __merge=false __convert=fals
+  function _document_tools_usage(){
+    echo "Usage: document_tools [options] <path/file>"
+    echo ""
+    echo "------------------------------------------------"
+    echo "Options:"
+    echo "    -c        Convert document mode"
+    echo "    -e        Extension"
+    echo "    -h        Show this message"
+    echo "    -m        Merge PDF mode"
+    echo "    -o        Target output file"
+  }
+  local __merge=false __convert=false
   PS3="$(_HandleCustom ${CYAN} "Select:" "")"
   while getopts ":m:f:o:q:h" opt; do
     case $opt in
@@ -1052,27 +1062,27 @@ function document_tools(){
       c ) local __convert=true && local __input="$OPTARG" ;;
       o ) local __output="$OPTARG" ;;
       e ) local __extension="$OPTARG" ;;
-      h ) _image_tools_usage; break;;
+      h ) _document_tools_usage; return 0;;
       \?) _HandleWarn "Invalid option" >&2; return 1; break;;
       : ) _HandleError "Option '-$OPTARG' requires" >&2; return 1; break;;
     esac
   done
-  [[ $__merge && $__convert ]] && _HandleError "Only one option you can do!" && return 1
+  if [[ $# -eq 0 ]]; then _document_tools_usage && return 1; fi
   if [[ "${docExtension[*]}" =~ "\\b($__input)\\b" ]]; then
+    if $__merge && $__convert; then _HandleError "Only one option you can do!" && return 1; fi
     if [[ $__merge ]]; then
-      find ./ -maxdepth 1 -name "${__input##*.}" -type f | while read -r select; do
-        [[ -z $select || ! $select ]] && _HandleError "File does not exits" && return 1 && break
-        [[ -z $__output ]] && __output="$(date +"%Y-%m-%d_%H:%M-merged").pdf"
-        [[ ${__output##*.} != "pdf" ]] && _HandleError "Only extension PDF can used merge documments" && return 1 && break
-        echo -ne "${CYAN}Process:${RESET} Merge ${GREEN}$select${RESET} to ${GREEN}$__output${RESET} ~ "
-        local process=$(pdftk "$select" cat output "$__output")
-        [[ $? -eq 0 && -f $__output ]] && echo "${GREEN}OK${RESET}" && return 0 || \
-          echo "${RED}FAILED${RESET}" && return 1
-      done
+      local getAllFile=($(find ./ -maxdepth 1 -type f -name "*.${__input}" -printf "%f\n" | tr '\n' ' '))
+      [[ ${#getAllFile[@]} == 0 ]] && echo "File does not exist" && return 1
+      [[ ! $__output ]] && __output="$(date +"%Y-%m-%d_%H:%M-merged").pdf"
+      [[ ${__output##*.} != "pdf" ]] && _HandleError "Only extension PDF can used merge documments" && return 1 && break
+      echo -ne "${CYAN}Process:${RESET} Merger to ${GREEN}$__output${RESET} ~ "
+      local process=$(pdftk "${getAllFile[@]}" cat output "$__output")
+      [[ $? -eq 0 && -f $__output ]] && echo "${GREEN}OK${RESET}" && return 0 || \
+        echo "${RED}FAILED${RESET}" && return 1
     elif [[ $__convert ]]; then
       find ./ -maxdepth 1 -name "${__input##*.}" -type f | while read -r select; do
-        [[ -z $select || ! $select ]] && _HandleError "File does not exits" && return 1 && break
-        [[ -z $__output ]] && _HandleError "Need output option!" && return 1 && break
+        [[ ! $select ]] && _HandleError "File does not exits" && return 1 && break
+        [[ ! $__output ]] && _HandleError "Need output option!" && return 1 && break
         [[ ! "${docExtension[*]}" =~ "\\b($__output)\\b" ]] && local _output="${__output##*.}" || local _output="$__output"
         echo -ne "${CYAN}Process:${RESET} Convert ${GREEN}$select${RESET} to ${GREEN}$_output${RESET} ~ "
         local process=$(pandoc "$select" -o "${select%.*}.${_output##*.}")
@@ -1081,6 +1091,7 @@ function document_tools(){
       done
     fi
   else
+    if $__merge && $__convert; then _HandleError "Only one option you can do!" && return 1; fi
     [[ ! -f $__input ]] && _HandleError "No such file existed!" && return 1
     if [[ $__merge ]]; then
       _HandleWarn "Only can use multiple documents. Try using 'pdf'!"
@@ -1703,7 +1714,7 @@ alias pc="proxyConnect"
 alias sc="sshConnect"
 alias rdns="restartDNS"
 alias spd="speeds"
-alias fbw="filebrowser"
+alias fbw="fileBrowser"
 
 alias gpull="git_tools -p"
 alias gpush="git_tools -P"
