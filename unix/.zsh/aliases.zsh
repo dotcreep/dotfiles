@@ -897,9 +897,8 @@ function cloudTunnel(){
   elif $boot; then
     [[ ! -d "$HOME/.termux/boot/" ]] && mkdir -p $HOME/.termux/boot
     _HandleStart "Installing boot service"
-    echo -ne "#!/data/data/com.termux/files/usr/bin/sh\ntermux-wake-lock\ncloudflared --no-autoupdate tunnel run --token $token" \
-      > $HOME/.termux/boot/cloudflared
-    chmod +x $HOME/.termux/boot/cloudflared
+    local execute=$(echo -ne "#!/data/data/com.termux/files/usr/bin/sh\ntermux-wake-lock\ncloudflared --no-autoupdate tunnel run --token $token" > $HOME/.termux/boot/cloudflared && \
+    chmod +x $HOME/.termux/boot/cloudflared)
     [[ $? -eq 0 && -f "$HOME/.termux/boot/cloudflared" ]] && _HandleResult "Success added autostart on boot" && return 0 ||
       _HandleError "Failed running on boot" && return 1
   elif $service; then
