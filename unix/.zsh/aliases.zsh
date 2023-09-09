@@ -851,7 +851,8 @@ function fileBrowser(){
   if $daemon; then
     _HandleStart "Running as daemon"
     local runProgram=$(filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs" > $HOME/.fileBrowser.log 2>&1 &)
-    [[ $? -eq 0 ]] && _HandleResult "Success running on the background"
+    [[ $? -eq 0 ]] && _HandleResult "Success running on the background" &&
+      echo "Open http://${addr}:${port}"
   else
     filebrowser -d "$HOME/.filebrowser.db" -p "$port" -a "$addr" -r "$dirs"
   fi  
