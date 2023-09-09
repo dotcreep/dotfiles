@@ -1877,7 +1877,7 @@ function aliasHelp(){
   esac
 }
 
-alias i="instal l"
+alias i="install"
 alias u="update"
 alias uu="upgrade"
 alias uuu="updateupgrade"
