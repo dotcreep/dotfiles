@@ -916,8 +916,13 @@ function cloudTunnel(){
     if [[ $(_processCheck cloudflared) ]]; then
       _HandleStart "Stopping cloudflared"
       local execute=$(killall cloudflared)
-      [[ $? -eq 0 && ! $(_processCheck cloudflared) ]] && _HandleResult "Program has been stopped" && return 0 ||
+      if [[ $? -eq 0 && ! $(_processCheck cloudflared) ]]; then
+        _HandleResult "Program has been stopped" && return 0
+      else
         _HandleError "Failed stopping program" && return 1
+      fi
+    else
+      _HandleWarn "Cloudflare is not running"
     fi
   elif $boot; then
     [[ ! -d "$HOME/.termux/boot/" ]] && mkdir -p $HOME/.termux/boot
