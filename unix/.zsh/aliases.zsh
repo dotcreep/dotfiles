@@ -898,7 +898,7 @@ function cloudTunnel(){
       : ) _HandleError "Option -$OPTARG requires an arguments"; return 1;;
     esac
   done
-  if $end && $running || $service; then
+  if $end && $running || $end && $service; then
     _HandleError "Action denied"
     return 1
   fi
