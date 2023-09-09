@@ -932,7 +932,7 @@ function cloudTunnel(){
     [[ $? -eq 0 && -f "$HOME/.termux/boot/cloudflared" ]] && _HandleResult "Success added autostart on boot" && return 0 ||
       _HandleError "Failed running on boot" && return 1
   elif $service; then
-    echo "Coomingsoon"
+    echo "Cooming soon"
     return 0
   fi
 }
