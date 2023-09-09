@@ -874,8 +874,8 @@ function cloudTunnel(){
     echo "    -b <TOKEN>           Run on boot"
     echo "    -h                   Show this message"
     echo "    -r <TOKEN>           Running once"
-    echo "    -s <TOKEN>           Installing service"
-    echo "    -S <PROGRAM>         Stopping cloudflared process"
+    echo "    -S <TOKEN>           Installing service"
+    echo "    -s <PROGRAM>         Stopping cloudflared process"
   }
   local running=false 
   local boot=false 
@@ -887,9 +887,9 @@ function cloudTunnel(){
           local token="$OPTARG" ;;
       b)  boot=true
           local token="$OPTARG" ;;
-      s)  service=true
+      S)  service=true
           local token="$OPTARG" ;;
-      S)  end=true ;;
+      s)  end=true ;;
       h) _cloudTunnel_usage; return 0;;
       \? ) _HandleError "Invalid option: -$OPTARG"; return 1;;
       : ) _HandleError "Option -$OPTARG requires an arguments"; return 1;;
