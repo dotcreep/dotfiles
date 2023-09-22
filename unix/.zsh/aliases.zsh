@@ -155,10 +155,6 @@ function installnc(){
 
 function update(){
   [[ $_systemType == "termux" ]] && $_packageManager update && return 0
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need a package argument"
-    return 1
-  fi
   case $_packageManager in
     apt|apk|pkg) sudo $_packageManager update;;
     pacman) sudo $_packageManager -Syu;;
@@ -170,10 +166,6 @@ function update(){
 
 function upgrade(){
   [[ $_systemType == "termux" ]] && $_packageManager upgrade && return 0
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need a package argument"
-    return 1
-  fi
   case $_packageManager in
     pacman) sudo $_packageManager -Syu;;
     xbps-install) sudo $_packageManager -Su;;
@@ -215,10 +207,6 @@ function search(){
 function orphan(){
   [[ $_systemType == "termux" ]] && $_packageManager autoremove &&
     $_packageManager autoclean && return 0
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need a package argument"
-    return 1
-  fi
   case $_packageManager in
     apt|apk|pkg|dnf|yum) sudo $_packageManager autoremove;;
     pacman) sudo $_packageManager -Rns $(pacman -Qtdq);;
@@ -249,10 +237,6 @@ function reinstall(){
 function updateupgrade(){
   [[ $_systemType == "termux" ]] && $_packageManager update &&
     $_packageManager upgrade && return 0
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need a package argument"
-    return 1
-  fi
   case $_packageManager in
     apt) sudo $_packageManager update && sudo $_packageManager upgrade -y;;
     apk) sudo $_packageManager update && sudo $_packageManager upgrade;;
@@ -282,10 +266,6 @@ function detail(){
 
 function checkpackage(){
   [[ $_systemType == "termux" ]] && echo $_notSupport && return 1
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need a package argument"
-    return 1
-  fi
   case $_packageManager in
     apt) dpkg -C;;
     pacman) $_packageManager -Qkk;;
@@ -298,10 +278,6 @@ function checkpackage(){
 
 function listpackage(){
   [[ $_systemType == "termux" ]] && $_packageManager list-installed && return 0
-  if [[ $# -eq 0 ]]; then
-    _HandleError "Need a package argument"
-    return 1
-  fi
   case $_packageManager in
     apt) dpkg --list;;
     pacman) $_packageManager -Q;;
@@ -363,7 +339,7 @@ function myip(){
       [[ $(search ip-utils 2>/dev/null) ]] && _checkingPackage -i ip-utils -p ip 
     fi
   fi
-  local ipPublic=$(curl -s -m 5 ifconfig.me)
+  local ipPublic=$(curl -s -m 30 ifconfig.me)
   local list_ipDevice=() list_macDevice=() list_ip6Device=() list_gateway=()
   for checkGateway in $(ip route list match 0 table all scope global | awk '{for (i=1; i<=NF; i++) if ($i == "via") print $(i+1)}')
   do
