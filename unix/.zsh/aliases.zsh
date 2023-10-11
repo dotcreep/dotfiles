@@ -104,7 +104,7 @@ function _checkingPackage(){
   [[ -z $name ]] && name=$code
   [[ ! $(_found $name) ]] && _HandleWarn "$name not installed. Installing now!"
   if [[ ! $(search $name 2>/dev/null) ]]; then
-    _HandleError "$name is not found on the repository"
+    _HandleError "$name is not found in the repository"
     return 1
   fi
   _HandleStart "Installing $code"
@@ -1192,7 +1192,16 @@ function image_tools(){
 function document_tools(){
   [[ ! $(_found pandoc) ]] && _checkingPackage -i pandoc
   [[ ! $(_found gs) ]] && _checkingPackage -i ghostscript
-  [[ ! $(_found pdftk) ]] && _checkingPackage -i pdftk
+  if [[ ! $(_found pdftk) ]]; then
+    _checkingPackage -i pdftk
+    if [[ $? -ne 0 ]] && [[ $_packageManager == "apk" ]]; then
+      _HandleStart "Add compability to repository"
+      sudo sh -c 'echo -ne "\nhttps://dl-cdn.alpinelinux.org/alpine/v3.8/main\nhttps://dl-cdn.alpinelinux.org/alpine/v3.8/community" >> /etc/apk/repositories'
+      _HandleStart "Updating repository"
+      local process=$(update 2>/dev/null)
+      _checkingPackage -i pdftk
+    fi
+  fi
   [[ ! $(_found pandoc) || ! $(_found gs) || ! $(_found pdftk) ]] && \
     _HandleError "Need some dependencies, run 'documment_tools' again!" && return 1
   local docExtension=("abw" "aw" "csv" "dbk" "djvu" "doc" "docm" "docx" \
@@ -1226,7 +1235,7 @@ function document_tools(){
   if [[ "${docExtension[*]}" =~ "\\b($__input)\\b" ]]; then
     if $__merge && $__convert; then _HandleError "Only one option you can do!" && return 1; fi
     if [[ $__merge ]]; then
-      local getAllFile=($(find ./ -maxdepth 1 -type f -name "*.${__input}" -printf "%f\n" | tr '\n' ' '))
+      local getAllFile=($(find ./ -maxdepth 1 -type f -name "*.${__input}" -exec basename {} \; | tr '\n' ' '))
       [[ ${#getAllFile[@]} == 0 ]] && echo "File does not exist" && return 1
       [[ ! $__output ]] && __output="$(date +"%Y-%m-%d_%H:%M-merged").pdf"
       [[ ${__output##*.} != "pdf" ]] && _HandleError "Only extension PDF can used merge documments" && return 1 && break
