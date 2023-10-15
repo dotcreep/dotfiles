@@ -1671,7 +1671,7 @@ function sysctl(){
     esac
   done
 
-  if [[ -z $action || -z $actionSV ]]; then
+  if [[ $# -eq 0 ]]; then
     _HandleError "Must specify one option"
     return 1
   fi
