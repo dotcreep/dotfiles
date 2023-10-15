@@ -1673,12 +1673,8 @@ function sysctl(){
 
   [[ -z $action || -z $actionSV ]] && _HandleError "Must specify one option" && return 1
   if $_thisTermux; then
-    local thisAction='^(up|restart|down|sv-enable|sv-disable)$'
-    if [[ $thisAction =~ "restart" ]];
-      $_sysService down $service
-      $_sysService up $service
-    fi
-    [[ $action =~ $thisAction ]] && $_sysService $action $service || _HandleWarn "$_notSupport"
+    local thisAction='^(up|reload|status|down|sv-enable|sv-disable)$'
+    [[ $actionSV =~ $thisAction ]] && $_sysService $actionSV $service || _HandleWarn "$_notSupport"
   elif $_thisWin; then
     local thisAction='^(start|restart|stop|status|enable|disable)$'
     [[ $action =~ $thisAction ]] && sudo $_sysService $service $action || _HandleWarn "$_notSupport"
