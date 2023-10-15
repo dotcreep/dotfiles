@@ -1671,7 +1671,10 @@ function sysctl(){
     esac
   done
 
-  [[ -z $action || -z $actionSV ]] && _HandleError "Must specify one option" && return 1
+  if [[ -z $action || -z $actionSV ]]; then
+    _HandleError "Must specify one option"
+    return 1
+  fi
   if $_thisTermux; then
     local thisAction='^(up|reload|status|down|sv-enable|sv-disable)$'
     [[ $actionSV =~ $thisAction ]] && $_sysService $actionSV $service || _HandleWarn "$_notSupport"
