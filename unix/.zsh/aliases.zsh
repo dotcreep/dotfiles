@@ -1677,19 +1677,19 @@ function sysctl(){
   fi
   if $_thisTermux; then
     local thisAction='^(up|reload|status|down|sv-enable|sv-disable)$'
-    [[ $actionSV =~ $thisAction ]] && $_sysService $actionSV $service || _HandleWarn "$_notSupport"
+    [[ $actionSV =~ $thisAction ]] && $_sysService $actionSV $service || _HandleWarn "Invalid Options"
   elif $_thisWin; then
     local thisAction='^(start|restart|stop|status|enable|disable)$'
-    [[ $action =~ $thisAction ]] && sudo $_sysService $service $action || _HandleWarn "$_notSupport"
+    [[ $action =~ $thisAction ]] && sudo $_sysService $service $action || _HandleWarn "Invalid Options"
   else
     local thisAction='^(start|restart|stop|status|enable|disable)$'
     local updown='^(up|down)$'
     if [[ $_sysService == "systemctl" ]]; then
       [[ $action =~ $thisAction ]] && sudo $_sysService $action $service && return 0 ||
-        _HandleWarn "$_notSupport" && return 1
+        _HandleWarn "Invalid Options" && return 1
     elif [[ $_sysService == "service" ]]; then
       [[ $action == $thisAction ]] && sudo $_sysService $service $action && return 0 ||
-        _HandleWarn "$_notSupport" && return 1
+        _HandleWarn "Invalid Options" && return 1
     elif [[ $_sysService == "sv" ]]; then
       if [[ $action =~ $updown ]]; then
         sudo $_sysService $action $service && return 0
