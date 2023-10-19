@@ -1390,7 +1390,7 @@ function installBundles(){
       _HandleStart "Install Docker"
       local stepfour=$(update && installnc docker-ce docker-ce-cli containerd.io && \
         sudo usermod -aG docker $USER)
-      [[ $? -ne 0 ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 1
+      [[ $? -ne 0 && $(_found docker) ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 1
     }
     function ___CHECK__DOCKER___(){
       [[ $(_found docker) ]] && _HandleResult "Already installed" && return 0
@@ -1399,6 +1399,19 @@ function installBundles(){
       ___CHECK__DOCKER___
       ___INSTALL__DOCKER__DU___ "$_sysName"
       return 0
+    elif [[ $_sysName == "alpine" ]]; then
+      ___CHECK__DOCKER___
+      _HandleStart "Install docker"
+      local stepone=$(install docker)
+      [[ $? -ne 0 ]] && _HandleError "Failed install docker" && return 1
+      _HandleStart "Add user to docker group"
+      local steptwo=$(addgroup $USER docker)
+      [[ $? -ne 0 ]] && _HandleError "Failed add to group" && return 1
+      _HandleStart "Start services"
+      local stepthree=$(rc-update add docker default && service docker start)
+      [[ $? -ne 0 ]] && _HandleError "Failed run service" && return 1
+      [[ $? -ne 0 && $(_found docker) ]] && _HandleResult "Docker successfully installed" && return 0 ||
+        _HandleError "Failed install docker" && return 1
     elif [[ $_sysName == "centos" ]]; then
       ___CHECK__DOCKER___
       _HandleStart "Install dependency"
