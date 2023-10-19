@@ -1513,9 +1513,9 @@ function installBundles(){
         if [[ $PREFIX ]]; then
           local run=$(wget -O $PREFIX/bin/cloudflared $url$1 && chmod +x $PREFIX/bin/cloudflared)
         elif [[ -d "/usr/bin/" ]]; then
-          local run=$(sudo wget -O /usr/bin/cloudflared $url$1 && chmod +x /usr/bin/cloudflared)
+          local run=$(sudo wget -O /usr/bin/cloudflared $url$1 && sudo chmod +x /usr/bin/cloudflared)
         elif [[ -d "/bin/" ]]; then
-          local run=$(sudo wget -O /bin/cloudflared $url$1 && chmod +x /bin/cloudflared)
+          local run=$(sudo wget -O /bin/cloudflared $url$1 && sudo chmod +x /bin/cloudflared)
         else
           _HandleWarn "$_notSupport" && return 1
         fi
