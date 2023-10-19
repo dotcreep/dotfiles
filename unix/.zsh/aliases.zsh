@@ -1688,7 +1688,7 @@ function sctl(){
       [[ $action =~ $thisAction ]] && sudo $_sysService $action $service && return 0 ||
         _HandleWarn "Invalid Options" && return 1
     elif [[ $_sysService == "service" ]]; then
-      [[ $action == $thisAction ]] && sudo $_sysService $service $action && return 0 ||
+      [[ $action =~ $thisAction ]] && sudo $_sysService $service $action && return 0 ||
         _HandleWarn "Invalid Options" && return 1
     elif [[ $_sysService == "sv" ]]; then
       if [[ $action =~ $updown ]]; then
