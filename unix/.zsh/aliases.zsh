@@ -1622,7 +1622,7 @@ function play(){
   fi
 }
 
-function sysctl(){
+function sctl(){
   if $_thisTermux; then
     [[ ! $(_found sv) ]] && _checkingPackage -i termux-services
     _sysService="sv"
@@ -1642,7 +1642,7 @@ function sysctl(){
   fi
 
   function _sctl_usage(){
-    echo "Usage: sysctl <options> service"
+    echo "Usage: sctl <options> service"
     echo ""
     echo "Options :"
     echo "------------------------------------------------"
@@ -1764,7 +1764,7 @@ function aliasHelp(){
   function __OTHERS__(){
     echo "    installBundles  Bundling installer"
     echo "    play            Play console games"
-    echo "    sysctl          System control"
+    echo "    sctl          System control"
   }
   function __PACKAGE_MANAGER_MINI__(){
     echo "    i               Install package"
