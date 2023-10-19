@@ -1405,10 +1405,10 @@ function installBundles(){
       local stepone=$(install docker)
       [[ $? -ne 0 ]] && _HandleError "Failed install docker" && return 1
       _HandleStart "Add user to docker group"
-      local steptwo=$(addgroup $USER docker)
+      local steptwo=$(sudo addgroup $USER docker)
       [[ $? -ne 0 ]] && _HandleError "Failed add to group" && return 1
       _HandleStart "Start services"
-      local stepthree=$(rc-update add docker default && service docker start)
+      local stepthree=$(sudo rc-update add docker default && sudo service docker start)
       [[ $? -ne 0 ]] && _HandleError "Failed run service" && return 1
       [[ $? -ne 0 && $(_found docker) ]] && _HandleResult "Docker successfully installed" && return 0 ||
         _HandleError "Failed install docker" && return 1
