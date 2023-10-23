@@ -1402,7 +1402,7 @@ function installBundles(){
     elif [[ $_sysName == "alpine" ]]; then
       ___CHECK__DOCKER___
       _HandleStart "Install docker"
-      local stepone=$(install docker)
+      local stepone=$(install docker docker-cli-compose)
       [[ $? -ne 0 ]] && _HandleError "Failed install docker" && return 1
       _HandleStart "Add user to docker group"
       local steptwo=$(sudo addgroup $USER docker)

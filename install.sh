@@ -4,6 +4,7 @@
 [[ ! $(command -v git) ]] && installnc git
 [[ ! $(command -v wget) ]] && installnc wget
 [[ ! $(command -v curl) ]] && installnc curl
+[[ ! $(command -v chsh) ]] && installnc shadow
 if $_thisTermux; then
   installnc starship
 else
@@ -16,9 +17,11 @@ fi
 [[ ! -f "$HOME/.zshrc" ]] && ln -s ${PWD}/unix/.zshrc $HOME/.zshrc
 [[ ! -d "$HOME/.zsh" ]] && ln -s ${PWD}/unix/.zsh $HOME/.zsh
 [[ ! -d "$HOME/.config/nvim/" ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
-[[ -f "$HOME/.termux/font.ttf" ]] && mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf && \
-  ln -s ${PWD}/font/font.ttf $HOME/.termux/font.ttf || ln -s ${PWD}/font/font.ttf $HOME/.termux/font.ttf
-echo -ne "\n\nUse path '$HOME/.zsh-custom/many-your-alias.zsh' for custom alias with your own.\nCreate 'mkdir $HOME/.zsh-custom' in not exists\n"
+if [[ -f "$HOME/.termux/font.ttf" ]]; then
+  mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf
+  ln -s ${PWD}/font/font.ttf $HOME/.termux/font.ttf
+fi
+echo -ne "\n\nUse path '$HOME/.zsh-custom/many-your-alias.zsh' for custom alias with your own.\nCreate 'mkdir $HOME/.zsh-custom' if not exists\n"
 function changeShell(){
   [[ $_thisTermux ]] && chsh -s zsh || chsh -s /bin/zsh
 }
