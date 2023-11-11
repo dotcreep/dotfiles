@@ -1382,9 +1382,14 @@ function installBundles(){
         sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg)
       [[ $? -ne 0 ]] && _HandleError "Failed install GPG" && return 1
       _HandleStart "Add repo to system"
+      if [[ $(lsb_release -cs) == "n/a" ]]; then
+        local _typeCheck=$(grep 'VERSION=' /etc/os-release | grep -o -P '(?<=\().+?(?=\))')
+      else
+        local _typeCheck=$(lsb_release -cs)
+      fi
       local stepthree=$(echo \
             "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-            https://download.docker.com/linux/$1 $(lsb_release -cs) stable" | \
+            https://download.docker.com/linux/$1 $_typeCheck stable" | \
             sudo tee /etc/apt/sources.list.d/docker.list >/dev/null)
       [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
       _HandleStart "Install Docker"
@@ -1718,7 +1723,11 @@ function sctl(){
 }
 
 function ls(){
-  [[ ! $(_found exa) ]] && _checkingPackage -i exa -p exa && exa --icons --group-directories-first $* || exa --icons --group-directories-first $*
+  if [[ $(uname -a | grep "\-aws") ]]; then
+    ls
+  else
+    [[ ! $(_found exa) ]] && _checkingPackage -i exa -p exa && exa --icons --group-directories-first $* || exa --icons --group-directories-first $*
+  fi
 }
 
 function aliasHelp(){
