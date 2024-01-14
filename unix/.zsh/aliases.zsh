@@ -1695,19 +1695,33 @@ function sctl(){
   fi
   if $_thisTermux; then
     local thisAction='^(up|reload|status|down|sv-enable|sv-disable)$'
-    [[ $actionSV =~ $thisAction ]] && $_sysService $actionSV $service || _HandleWarn "Invalid Options"
+    if [[ $actionSV =~ $thisAction ]]; then
+      $_sysService $actionSV $service && return 0
+    else
+      _HandleWarn "Invalid Options" && return 1
+    fi
   elif $_thisWin; then
     local thisAction='^(start|restart|stop|status|enable|disable)$'
-    [[ $action =~ $thisAction ]] && sudo $_sysService $service $action || _HandleWarn "Invalid Options"
+    if [[ $action =~ $thisAction ]]; then
+      sudo $_sysService $service $action && return 0
+    else
+      _HandleWarn "Invalid Options" && return 1
+    fi
   else
     local thisAction='^(start|restart|stop|status|enable|disable)$'
     local updown='^(up|down)$'
     if [[ $_sysService == "systemctl" ]]; then
-      [[ $action =~ $thisAction ]] && sudo $_sysService $action $service && return 0 ||
+      if [[ $action =~ $thisAction ]]; then
+        sudo $_sysService $action $service && return 0
+      else
         _HandleWarn "Invalid Options" && return 1
+      fi
     elif [[ $_sysService == "service" ]]; then
-      [[ $action =~ $thisAction ]] && sudo $_sysService $service $action && return 0 ||
+      if [[ $action =~ $thisAction ]]; then
+        sudo $_sysService $service $action && return 0
+      else
         _HandleWarn "Invalid Options" && return 1
+      fi
     elif [[ $_sysService == "sv" ]]; then
       if [[ $action =~ $updown ]]; then
         sudo $_sysService $action $service && return 0
