@@ -1,20 +1,10 @@
 function uninstall_dotfiles(){
   echo "NOTICE: Your custom aliases still existed in $HOME/.zsh-custom"
-  if [[ -f "$HOME/.zshrc" ]]; then
-    rm -rf $HOME/.zshrc
-  fi
-  if [[ -f "$HOME/.zsh" ]]; then
-    rm -rf $HOME/.zsh
-  fi
-  if [[ -f "$HOME/.zsh-plugin" ]]; then
-    rm -rf $HOME/.zsh-plugin
-  fi
-  if [[ -f "$HOME/.config/nvim" ]]; then
-    rm -rf $HOME/.config/nvim
-  fi
-  if [[ -f "$HOME/.termux/font-backup.ttf" ]]; then
-    mv $HOME/.termux/font-backup.ttf $HOME/.termux/font.ttf
-  fi
+  [[ -f "$HOME/.zshrc" ]] && rm -rf $HOME/.zshrc
+  [[ -d "$HOME/.zsh" ]] && rm -rf $HOME/.zsh
+  [[ -d "$HOME/.zsh-plugin" ]] && rm -rf $HOME/.zsh-plugin
+  [[ -d "$HOME/.config/nvim" ]] && rm -rf $HOME/.config/nvim
+  [[ -f "$HOME/.termux/font-backup.ttf" ]] && mv $HOME/.termux/font-backup.ttf $HOME/.termux/font.ttf
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Failed uninstall"
     return 1

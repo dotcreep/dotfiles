@@ -6,6 +6,13 @@ These **dotfiles** contains my personal linux and windows configuration files. I
 Personally, I'm using [Nerd-Fonts](https://www.nerdfonts.com/) for displaying icon on my terminal on [this screenshot](#screenshot). Currently using **Caskaydia Cove Nerd Font Complete Mono Windows Compatible Regular**
 
 # Install
+
+**Hide Repo Directory**
+```
+git clone https://github.com/dotcreep/dotfiles.git .dotfiles && (cd .dotfiles && bash install.sh)
+```
+
+**Show Repo Directory**
 ```
 git clone https://github.com/dotcreep/dotfiles.git && (cd dotfiles && bash install.sh)
 ```
