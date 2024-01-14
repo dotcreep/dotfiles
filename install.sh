@@ -5,6 +5,7 @@
 [[ ! $(command -v wget) ]] && installnc wget
 [[ ! $(command -v curl) ]] && installnc curl
 [[ ! $(command -v chsh) ]] && installnc shadow
+[[ ! $(command -v chsh) ]] && installnc bash-completion
 if $_thisTermux; then
   installnc starship
 else

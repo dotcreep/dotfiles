@@ -9,7 +9,8 @@ if [[ -d $HOME/.zsh-custom ]]; then
         [[ -f "$zsh_custom" ]] && source "$zsh_custom"
     done
 fi
-
+# Bash completion
+autoload -U +X bashcompinit && bashcompinit
 # ZSH + Starship Configuration
 for zsh in $HOME/.zsh/*.zsh; do
     [[ -f "$zsh" ]] && source "$zsh"
