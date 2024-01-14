@@ -4,7 +4,9 @@ function uninstall_dotfiles(){
   [[ -d "$HOME/.zsh" ]] && rm -rf $HOME/.zsh
   [[ -d "$HOME/.zsh-plugin" ]] && rm -rf $HOME/.zsh-plugin
   [[ -d "$HOME/.config/nvim" ]] && rm -rf $HOME/.config/nvim
-  [[ -f "$HOME/.termux/font-backup.ttf" ]] && mv $HOME/.termux/font-backup.ttf $HOME/.termux/font.ttf
+  if [[ -d "/data/data/com.termux/files/home" ]]; then
+    [[ -f "$HOME/.termux/font-backup.ttf" ]] && mv $HOME/.termux/font-backup.ttf $HOME/.termux/font.ttf
+  fi
   if [[ $? -ne 0 ]]; then
     echo "ERROR: Failed uninstall"
     return 1
