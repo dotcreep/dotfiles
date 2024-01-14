@@ -1748,7 +1748,7 @@ function ls(){
           _checkingPackage -i unzip -p unzip
         fi
         _HandleStart "Download dependency"
-        local step=(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
+        local step=$(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
         if [[ ! -f "/usr/bin/exa" ]]; then
           _HandleStart "Installing ..."
           sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
