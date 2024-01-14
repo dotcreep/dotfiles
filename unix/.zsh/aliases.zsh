@@ -1740,7 +1740,25 @@ function ls(){
   if [[ $(uname -a | grep "\-aws") ]]; then
     ls
   else
-    [[ ! $(_found exa) ]] && _checkingPackage -i exa -p exa && exa --icons --group-directories-first $* || exa --icons --group-directories-first $*
+    if [[ ! $(_found exa) ]]; then
+      _checkingPackage -i exa -p exa
+      if [[ $? -eq 1 ]] || [[ ! $(_found exa) ]] && [[ "$_sysName" == "ubuntu" ]]; then
+        if [[ ! $(_found unzip) ]]; then
+          _checkingPackage -i unzip -p unzip
+        fi
+        wget --show-progress -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip
+        if [[ ! -f "/usr/bin/exa" ]]; then
+          sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
+          sudo chmod +x /usr/bin/exa
+          rm /tmp/exa.zip
+        fi
+      fi
+      _HandleResult "Success install dependency"
+      echo ""
+      exa --icons --group-directories-first $*
+    else
+      exa --icons --group-directories-first $*
+    fi
   fi
 }
 
