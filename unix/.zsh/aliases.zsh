@@ -1743,19 +1743,23 @@ function ls(){
     if [[ ! $(_found exa) ]]; then
       _checkingPackage -i exa -p exa
       if [[ $? -eq 1 ]] || [[ ! $(_found exa) ]] && [[ "$_sysName" == "ubuntu" ]]; then
+        _HandleStart "Trying install dependency"
         if [[ ! $(_found unzip) ]]; then
           _checkingPackage -i unzip -p unzip
         fi
-        wget --show-progress -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip
+        _HandleStart "Download dependency"
+        local step=(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
         if [[ ! -f "/usr/bin/exa" ]]; then
+          _HandleStart "Installing ..."
           sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
+          _HandleStart "Configuring ..."
           sudo chmod +x /usr/bin/exa
           rm /tmp/exa.zip
         fi
+        _HandleResult "Success install dependency"
+        echo ""
+        exa --icons --group-directories-first $*
       fi
-      _HandleResult "Success install dependency"
-      echo ""
-      exa --icons --group-directories-first $*
     else
       exa --icons --group-directories-first $*
     fi
