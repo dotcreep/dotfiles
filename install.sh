@@ -1,17 +1,19 @@
 
 [[ -f "$(pwd)/unix/.zsh/aliases.zsh" ]] && source "$(pwd)/unix/.zsh/aliases.zsh"
-[[ ! $(command -v zsh) ]] && installnc zsh
-[[ ! $(command -v wget) ]] && installnc wget
-[[ ! $(command -v curl) ]] && installnc curl
-[[ ! $(command -v chsh) ]] && installnc shadow
-[[ ! $(command -v chsh) ]] && installnc bash-completion
-if $_thisTermux; then
-  installnc starship
-else
-  if [[ ! $(command -v starship) ]]; then
-    (curl -sS https://starship.rs/install.sh | sh)
+[[ ! $(_found zsh) ]] && installnc zsh
+[[ ! $(_found wget) ]] && installnc wget
+[[ ! $(_found curl) ]] && installnc curl
+[[ ! $(_found chsh) ]] && installnc shadow
+[[ ! $(_found chsh) ]] && installnc bash-completion
+funtion installinStarship_(){
+  if $_thisTermux; then
+    installnc starship
+  else
+    if [[ ! $(_found starship) ]]; then
+      (curl -sS https://starship.rs/install.sh | sh)
+    fi
   fi
-fi
+}
 [[ ! -d "$HOME/.zsh-plugin" ]] && mkdir -p $HOME/.zsh-plugin
 [[ ! -d "$HOME/.config" ]] && mkdir $HOME/.config
 [[ ! -d "$HOME/.zsh-plugin/zsh-autosuggestions" ]] && git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.zsh-plugin/zsh-autosuggestions
@@ -19,7 +21,7 @@ fi
 [[ ! -f "$HOME/.zshrc" ]] && ln -s ${PWD}/unix/.zshrc $HOME/.zshrc
 [[ ! -d "$HOME/.zsh" ]] && ln -s ${PWD}/unix/.zsh $HOME/.zsh
 [[ ! -d "$HOME/.config/nvim/" ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
-if [[ -d "/data/data/com.termux/files/home" ]]; then
+if $_thisTermux; then
   if [[ -f "$HOME/.termux/font.ttf" ]]; then
     mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf
   fi
@@ -31,5 +33,5 @@ function changeShell(){
   [[ $_thisTermux ]] && chsh -s zsh || chsh -s /bin/zsh
 }
 [[ $(basename $SHELL) != 'zsh' ]] && changeShell
-[[ -d "/data/data/com.termux/files/home" ]] && termux-reload-settings
+if $_thisTermux; then termux-reload-settings; fi
 exec zsh
