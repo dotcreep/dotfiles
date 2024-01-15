@@ -5,15 +5,11 @@
 [[ ! $(_found curl) ]] && installnc curl
 [[ ! $(_found chsh) ]] && installnc shadow
 [[ ! $(_found chsh) ]] && installnc bash-completion
-funtion installinStarship_(){
-  if $_thisTermux; then
-    installnc starship
-  else
-    if [[ ! $(_found starship) ]]; then
-      (curl -sS https://starship.rs/install.sh | sh)
-    fi
-  fi
-}
+if $_thisTermux; then
+  installnc starship
+else
+  [[ ! $(_found starship) ]] && (curl -sS https://starship.rs/install.sh | sh)
+fi
 [[ ! -d "$HOME/.zsh-plugin" ]] && mkdir -p $HOME/.zsh-plugin
 [[ ! -d "$HOME/.config" ]] && mkdir $HOME/.config
 [[ ! -d "$HOME/.zsh-plugin/zsh-autosuggestions" ]] && git clone https://github.com/zsh-users/zsh-autosuggestions $HOME/.zsh-plugin/zsh-autosuggestions
