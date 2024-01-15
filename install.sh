@@ -1,7 +1,6 @@
 
 [[ -f "$(pwd)/unix/.zsh/aliases.zsh" ]] && source "$(pwd)/unix/.zsh/aliases.zsh"
 [[ ! $(command -v zsh) ]] && installnc zsh
-[[ ! $(command -v git) ]] && installnc git
 [[ ! $(command -v wget) ]] && installnc wget
 [[ ! $(command -v curl) ]] && installnc curl
 [[ ! $(command -v chsh) ]] && installnc shadow
@@ -37,3 +36,6 @@ if [[ $(basename $SHELL) != 'zsh' ]]; then
     esac
 fi
 exec zsh
+if [[ -d "/data/data/com.termux/files/home" ]]; then
+  termux-reload-settings
+fi
