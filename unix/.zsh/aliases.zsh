@@ -1375,7 +1375,7 @@ function installBundles(){
     if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
     function ___INSTALL__DOCKER__DU___(){
       _HandleStart "Install dependency"
-      local stepone=$(update && installnc ca-certificates curl gnupg2 software-properties-common)
+      local stepone=$(update && installnc ca-certificates curl gnupg2 software-properties-common 2>/dev/null)
       [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
       _HandleStart "Install GPG Docker"
       local steptwo=$(curl -fsSL https://download.docker.com/linux/$1/gpg | \
@@ -1393,7 +1393,7 @@ function installBundles(){
             sudo tee /etc/apt/sources.list.d/docker.list >/dev/null)
       [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
       _HandleStart "Install Docker"
-      local stepfour=$(update && installnc docker-ce docker-ce-cli containerd.io && \
+      local stepfour=$(update && installnc docker-ce docker-ce-cli containerd.io 2>/dev/null && \
         sudo usermod -aG docker $USER)
       [[ $? -ne 0 && $(_found docker) ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 1
     }
@@ -1451,7 +1451,7 @@ function installBundles(){
     [[ $(_found kubeadm) ]] && _HandleResult "Already installed" && return 0
     if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
       _HandleStart "Install dependency"
-      local stepone=$(update && installnc apt-transport-https ca-certificates curl)
+      local stepone=$(update && installnc apt-transport-https ca-certificates curl 2>/dev/null)
       [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
       _HandleStart "Add kubernetes repository"
       local steptwo=$(curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
@@ -1556,7 +1556,7 @@ function installBundles(){
     if [[ ! $(_found snap) ]]; then
       _HandleStart "Installing snap to system"
       if [[ $_sysName == "ubuntu" || $_sysName == "debian" ]]; then
-        update && installnc snapd
+        update && installnc snapd 2>/dev/null
       elif [[ $_sysName == "fedora" ]]; then
         installnc snapd
       elif [[ $_sysName == "centos" || $_sysName == "redhat" || $_sysName == "rhel" ]]; then

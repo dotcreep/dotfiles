@@ -18,8 +18,10 @@ fi
 [[ ! -f "$HOME/.zshrc" ]] && ln -s ${PWD}/unix/.zshrc $HOME/.zshrc
 [[ ! -d "$HOME/.zsh" ]] && ln -s ${PWD}/unix/.zsh $HOME/.zsh
 [[ ! -d "$HOME/.config/nvim/" ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
-if [[ -f "$HOME/.termux/font.ttf" ]]; then
-  mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf
+if [[ =d "/data/data/com.termux/files/home" ]]; then
+  if [[ -f "$HOME/.termux/font.ttf" ]]; then
+    mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf
+  fi
   ln -s ${PWD}/font/font.ttf $HOME/.termux/font.ttf
 fi
 echo -ne "\n\nUse path '$HOME/.zsh-custom/many-your-alias.zsh' for custom alias with your own.\nCreate 'mkdir $HOME/.zsh-custom' if not exists\n"
