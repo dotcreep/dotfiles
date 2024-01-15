@@ -18,7 +18,7 @@ fi
 [[ ! -f "$HOME/.zshrc" ]] && ln -s ${PWD}/unix/.zshrc $HOME/.zshrc
 [[ ! -d "$HOME/.zsh" ]] && ln -s ${PWD}/unix/.zsh $HOME/.zsh
 [[ ! -d "$HOME/.config/nvim/" ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
-if [[ =d "/data/data/com.termux/files/home" ]]; then
+if [[ -d "/data/data/com.termux/files/home" ]]; then
   if [[ -f "$HOME/.termux/font.ttf" ]]; then
     mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf
   fi
