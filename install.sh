@@ -8,7 +8,9 @@
 if $_thisTermux; then
   installnc starship
 else
-  [[ ! $(command -v starship) ]] && (curl -sS https://starship.rs/install.sh | sh)
+  if [[ ! $(command -v starship) ]]; then
+    (curl -sS https://starship.rs/install.sh | sh)
+  fi
 fi
 [[ ! -d "$HOME/.zsh-plugin" ]] && mkdir -p $HOME/.zsh-plugin
 [[ ! -d "$HOME/.config" ]] && mkdir $HOME/.config
