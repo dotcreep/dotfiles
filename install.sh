@@ -25,14 +25,7 @@ if [[ -d "/data/data/com.termux/files/home" ]]; then
 fi
 echo -ne "\n\nUse path '$HOME/.zsh-custom/many-your-alias.zsh' for custom alias with your own.\nCreate 'mkdir $HOME/.zsh-custom' if not exists\n"
 function changeShell(){
-  if [[ $_thisTermux ]]; then
-    chsh -s zsh
-    exec zsh
-    termux-reload-settings
-  else
-    chsh -s /bin/zsh
-    exec zsh
-  fi
+  [[ $_thisTermux ]] && chsh -s zsh || chsh -s /bin/zsh
 }
 if [[ $(basename $SHELL) != 'zsh' ]]; then
     echo -ne "\nSet default shell to ZSH (y/N)? "
@@ -42,3 +35,7 @@ if [[ $(basename $SHELL) != 'zsh' ]]; then
         n | N | * ) break;;
     esac
 fi
+if [[ -d "/data/data/com.termux/files/home" ]]; then
+  termux-reload-settings
+fi
+exec zsh
