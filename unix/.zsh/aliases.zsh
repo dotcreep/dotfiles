@@ -399,7 +399,11 @@ function getip(){
   if [[ $net ]]; then
     if $lokal; then
       shift
-      [[ ! $(_found dig) ]] && _checkingPackage -i dnsutils -p dig
+      if [[ "$_sysName" == "alpine" ]]; then
+        [[ ! $(_found dig) ]] && _checkingPackage -i bind-tools -p dig
+      else
+        [[ ! $(_found dig) ]] && _checkingPackage -i dnsutils -p dig
+      fi
       for i in "$@"; do
         local execute=$(dig $i | awk '/^;; ANSWER SECTION:/{flag=1; next} /^;; /{flag=0} flag{print $NF}' | tr '\n' ',' | sed 's/,,$//' | sed 's/,/, /g')
         [[ $execute == "0.0.0.0" || $execute == "127.0.0.1" ]] && echo " - ${RED}$i${RESET} : Error Access or Blocked by Internal" || echo " - ${GREEN}$i${RESET} : $execute"
