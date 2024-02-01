@@ -1198,7 +1198,7 @@ function document_tools(){
   [[ ! $(_found gs) ]] && _checkingPackage -i ghostscript
   if [[ ! $(_found pdftk) ]]; then
     _checkingPackage -i pdftk
-    if [[ $? -ne 0 ]] || [[ $_packageManager == "apk" ]]; then
+    if [[ $? -ne 0 ]] && [[ $_packageManager == "apk" ]]; then
       _HandleStart "Add compability to repository"
       local addingRepo=$(sudo sh -c 'echo -ne "\nhttps://dl-cdn.alpinelinux.org/alpine/v3.8/main\nhttps://dl-cdn.alpinelinux.org/alpine/v3.8/community" >> /etc/apk/repositories' &>/dev/null)
       _HandleStart "Updating repository"
