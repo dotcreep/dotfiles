@@ -1392,6 +1392,10 @@ function installBundles(){
       else
         local _typeCheck=$(lsb_release -cs)
       fi
+      if [[ $_typeCheck == "debian" ]]; then
+        sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
+      fi
       local stepthree=$(echo \
             "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
             https://download.docker.com/linux/$1 $_typeCheck stable" | \
@@ -1753,7 +1757,12 @@ function ls(){
           _checkingPackage -i unzip -p unzip
         fi
         _HandleStart "Download dependency"
-        local step=$(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
+        if [[ "$_sysArch" == "aarch64" ]]; then
+          local step=$(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-armv7-v0.10.1.zip)
+        fi
+        if [[ "$_sysArch" == "x86_64" ]]; then
+          local step=$(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
+        fi
         if [[ ! -f "/usr/bin/exa" ]]; then
           _HandleStart "Installing ..."
           sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
