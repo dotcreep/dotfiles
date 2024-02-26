@@ -480,7 +480,6 @@ function ls(){
             local step=$(sudo wget -qO /usr/bin/exa https://github.com/dotcreep/exa/releases/download/aarch64-0.10.1/exa-aarch64-v0.10.1)
             _HandleStart "Configuring ..."
             sudo chmod +x /usr/bin/exa
-            rm /tmp/exa.zip
           fi
         fi
         if [[ "$_sysArch" == "x86_64" ]]; then
