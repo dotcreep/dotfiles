@@ -411,7 +411,8 @@ function sshConnect(){
         local keax="KexAlgorithms=curve25519-sha256@libssh.org"
         local macs="MACs=hmac-sha2-256-etm@openssh.com"
         local hka="HostKeyAlgorithms=ssh-ed25519"
-        ssh $account_ssh -p $port $socks -o $chiper -o $keax -o $macs -o $hka 2>/dev/null
+        local strictKey="StrictHostKeyChecking=no"
+        ssh $account_ssh -p $port $socks -o $chiper -o $keax -o $macs -o $hka -o $strictKey 2>/dev/null
         [[ $? -ne 0 ]] && _HandleError "Unable connect to server"
         break;;
       h ) ssh_connect_usage && return 0;;
