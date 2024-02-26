@@ -324,7 +324,7 @@ function sshConnect(){
           [[ $? -eq 0 ]] && _HandleResult "Added $OPTARG"
           break;;
       b ) _HandleStart "Backup SSH Account"
-          echo "File directory : \$HOME/.sshconnectrc"
+          echo "File directory : $HOME/.sshconnectrc"
           echo "Account Lists: "
           cat $file_config;;
       d )
@@ -386,10 +386,10 @@ function sshConnect(){
         while read -r line; do
           options["$line"]=$line
         done < $file_config
-        [[ $(cat $file_config) ]] && options["Cancel"]="Cancel" || return 1
+        # [[ $(cat $file_config) ]] && options["Cancel"]="Cancel" || return 1
         local PS3=$(_HandleCustom ${CYAN} "Choose account:" "")
         select option in "${options[@]}"; do
-          [[ $option == "Cancel" ]] && return 0
+          # [[ $option == "Cancel" ]] && return 0
           if [[ -z $option || ! $option ]]; then
             _HandleError "Invalid input!"
             continue
