@@ -301,6 +301,7 @@ function sshConnect(){
     echo "Options :"
     echo "------------------------------------------------"
     echo "    -a ACCOUNT  Add ssh account"
+    echo "    -b          Backup ssh account"
     echo "    -c          Connect ssh account"
     echo "    -d          Delete ssh account"
     echo "    -h          Show this message"
@@ -317,11 +318,15 @@ function sshConnect(){
     _ssh_connect_usage
     return 0
   fi
-  while getopts ":a:k:Ksdch" opt; do
+  while getopts ":a:k:bKsdch" opt; do
     case $opt in
       a ) [[ $OPTARG =~ '^[^@]+@[^@]+$' ]] && echo $OPTARG >> $file_config 2>/dev/null || _HandleError "Input must be user@hostname only"
           [[ $? -eq 0 ]] && _HandleResult "Added $OPTARG"
           break;;
+      b ) _HandleStart "Backup SSH Account"
+          echo "File directory : \$HOME/.sshconnectrc"
+          echo "Account Lists: "
+          cat $file_config;;
       d )
         check_ssh_connect
         [[ $? -ne 0 ]] && return 1
