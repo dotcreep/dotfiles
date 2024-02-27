@@ -145,7 +145,7 @@ function installnc(){
     return 1
   fi
   case $_packageManager in
-    apt|dnf|yum|pkg|zypper) sudo $_packageManager install -y $*;;
+    apt|dnf|yum|pkg|zypper) sudo $_packageManager install -y $* 2>/dev/null;;
     pacman) sudo $_packageManager -S --noconfirm $*;;
     xbps-install) sudo xbps-install -Sy $*;;
     apk) sudo $_packageManager add --no-cache --quiet $*;;
