@@ -3,32 +3,38 @@ function installBundles(){
   function install_bundles_docker(){
     if $_thisTermux || $_thisWin; then _HandleWarn "$_notSupport" && return 1; fi
     function ___INSTALL__DOCKER__DU___(){
-      _HandleStart "Install dependency"
-      local stepone=$(update && installnc ca-certificates curl gnupg2 software-properties-common 2>/dev/null)
-      [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
-      _HandleStart "Install GPG Docker"
-      local steptwo=$(curl -fsSL https://download.docker.com/linux/$1/gpg | \
-        sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg)
-      [[ $? -ne 0 ]] && _HandleError "Failed install GPG" && return 1
-      _HandleStart "Add repo to system"
-      if [[ $(lsb_release -cs) == "n/a" ]]; then
+      if [[ $(lsb_release -cs 2>/dev/null) == "n/a" ]]; then
         local _typeCheck=$(grep 'VERSION=' /etc/os-release | grep -o -P '(?<=\().+?(?=\))')
       else
-        local _typeCheck=$(lsb_release -cs)
+        local _typeCheck=$(lsb_release -cs 2>/dev/null)
       fi
-      if [[ $_typeCheck == "debian" ]]; then
-        sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-        sudo chmod a+r /etc/apt/keyrings/docker.asc
+      if [[ $_typeCheck == "noble" ]]; then
+        _HandleStart "Install docker"
+        local stepone=$(installnc docker.io && sudo usermod -aG docker $USER)
+        [[ $? -ne 0 && $(_found docker) ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 0
+      else
+        _HandleStart "Install dependency"
+        local stepone=$(update && installnc ca-certificates curl gnupg2 software-properties-common 2>/dev/null)
+        [[ $? -ne 0 ]] && _HandleError "Failed install dependency" && return 1
+        _HandleStart "Install GPG Docker"
+        local steptwo=$(curl -fsSL https://download.docker.com/linux/$1/gpg | \
+          sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg)
+        [[ $? -ne 0 ]] && _HandleError "Failed install GPG" && return 1
+        _HandleStart "Add repo to system"
+        if [[ $_typeCheck == "debian" ]]; then
+          sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          sudo chmod a+r /etc/apt/keyrings/docker.asc
+        fi
+        local stepthree=$(echo \
+              "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+              https://download.docker.com/linux/$1 $_typeCheck stable" | \
+              sudo tee /etc/apt/sources.list.d/docker.list >/dev/null)
+        [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
+        _HandleStart "Install Docker"
+        local stepfour=$(update && installnc docker-ce docker-ce-cli containerd.io 2>/dev/null && \
+          sudo usermod -aG docker $USER)
+        [[ $? -ne 0 && $(_found docker) ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 0
       fi
-      local stepthree=$(echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-            https://download.docker.com/linux/$1 $_typeCheck stable" | \
-            sudo tee /etc/apt/sources.list.d/docker.list >/dev/null)
-      [[ $? -ne 0 ]] && _HandleError "Failed adding repo to system" && return 1
-      _HandleStart "Install Docker"
-      local stepfour=$(update && installnc docker-ce docker-ce-cli containerd.io 2>/dev/null && \
-        sudo usermod -aG docker $USER)
-      [[ $? -ne 0 && $(_found docker) ]] && _HandleError "Failed install Docker" && return 1 || _HandleResult "Docker successfulty installed" && return 1
     }
     function ___CHECK__DOCKER___(){
       [[ $(_found docker) ]] && _HandleResult "Already installed" && return 0
@@ -40,7 +46,7 @@ function installBundles(){
     elif [[ $_sysName == "alpine" ]]; then
       ___CHECK__DOCKER___
       _HandleStart "Install docker"
-      local stepone=$(install docker docker-cli-compose)
+      local stepone=$(installnc docker docker-cli-compose)
       [[ $? -ne 0 ]] && _HandleError "Failed install docker" && return 1
       _HandleStart "Add user to docker group"
       local steptwo=$(sudo addgroup $USER docker)
