@@ -474,23 +474,34 @@ function ls(){
         if [[ ! $(_found unzip) ]]; then
           _checkingPackage -i unzip -p unzip
         fi
-        if [[ "$_sysArch" == "aarch64" ]]; then
-          if [[ ! -f "/usr/bin/exa" ]]; then
-            _HandleStart "Installing ..."
-            local step=$(sudo wget -qO /usr/bin/exa https://github.com/dotcreep/exa/releases/download/aarch64-0.10.1/exa-aarch64-v0.10.1)
-            _HandleStart "Configuring ..."
-            sudo chmod +x /usr/bin/exa
+        if $_thisTermux; then
+          if [[ "$_sysArch" == "aarch64" ]]; then
+            if [[ ! -f "/data/data/com.termux/files/usr/bin/exa" ]]; then
+              _HandleStart "Installing ..."
+              local step=$(wget -qO /data/data/com.termux/files/usr/bin/exa https://github.com/dotcreep/exa/releases/download/aarch64-0.10.1/exa-aarch64-v0.10.1)
+              _HandleStart "Configuring ..."
+              chmod +x /data/data/com.termux/files/usr/bin/exa
+            fi
           fi
-        fi
-        if [[ "$_sysArch" == "x86_64" ]]; then
-          _HandleStart "Download dependency"
-          local step=$(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
-          if [[ ! -f "/usr/bin/exa" ]]; then
-            _HandleStart "Installing ..."
-            sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
-            _HandleStart "Configuring ..."
-            sudo chmod +x /usr/bin/exa
-            rm /tmp/exa.zip
+        else
+          if [[ "$_sysArch" == "aarch64" ]]; then
+            if [[ ! -f "/usr/bin/exa" ]]; then
+              _HandleStart "Installing ..."
+              local step=$(sudo wget -qO /usr/bin/exa https://github.com/dotcreep/exa/releases/download/aarch64-0.10.1/exa-aarch64-v0.10.1)
+              _HandleStart "Configuring ..."
+              sudo chmod +x /usr/bin/exa
+            fi
+          fi
+          if [[ "$_sysArch" == "x86_64" ]]; then
+            _HandleStart "Download dependency"
+            local step=$(wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip)
+            if [[ ! -f "/usr/bin/exa" ]]; then
+              _HandleStart "Installing ..."
+              sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
+              _HandleStart "Configuring ..."
+              sudo chmod +x /usr/bin/exa
+              rm /tmp/exa.zip
+            fi
           fi
         fi
         _HandleResult "Success install dependency"
