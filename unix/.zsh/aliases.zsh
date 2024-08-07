@@ -469,7 +469,7 @@ function ls(){
   else
     if [[ ! $(_found exa) ]]; then
       _checkingPackage -i exa -p exa
-      if [[ $? -eq 1 ]] || [[ ! $(_found exa) ]] && [[ "$_sysName" == "ubuntu" ]]; then
+      if [[ $? -eq 1 ]] || [[ ! $(_found exa) ]] && [[ "$_sysName" == "ubuntu" ]] || [[ "$_thisTermux" ]]; then
         _HandleStart "Trying install dependency"
         if [[ ! $(_found unzip) ]]; then
           _checkingPackage -i unzip -p unzip
