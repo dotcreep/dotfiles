@@ -16,7 +16,7 @@ fi
 [[ ! -d "$HOME/.zsh-plugin/zsh-syntax-highlighting" ]] && git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.zsh-plugin/zsh-syntax-highlighting
 [[ ! -f "$HOME/.zshrc" ]] && ln -s ${PWD}/unix/.zshrc $HOME/.zshrc
 [[ ! -d "$HOME/.zsh" ]] && ln -s ${PWD}/unix/.zsh $HOME/.zsh
-[[ ! -d "$HOME/.config/nvim/" ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
+# [[ ! -d "$HOME/.config/nvim/" ]] && ln -s ${PWD}/unix/nvim $HOME/.config/nvim
 if $_thisTermux; then
   if [[ -f "$HOME/.termux/font.ttf" ]]; then
     mv $HOME/.termux/font.ttf $HOME/.termux/font-backup.ttf

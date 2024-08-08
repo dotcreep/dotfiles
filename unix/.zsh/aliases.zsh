@@ -487,7 +487,7 @@ function ls(){
           if [[ "$_sysArch" == "aarch64" ]]; then
             if [[ ! -f "/usr/bin/exa" ]]; then
               _HandleStart "Installing ..."
-              sudo wget -qO /usr/bin/exa https://github.com/dotcreep/exa/releases/download/aarch64-0.10.1/exa-aarch64-v0.10.1
+              sudo wget -qO /usr/bin/exa https://github.com/dotcreep/dotfiles/releases/download/exa-v0.10.1/exa
               _HandleStart "Configuring ..."
               sudo chmod +x /usr/bin/exa
             fi
