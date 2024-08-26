@@ -1,0 +1,33 @@
+return {
+	"Exafunction/codeium.vim",
+	event = "BufEnter",
+	config = function()
+		local keymap = vim.keymap
+		local fn = vim.fn
+		keymap.set("i", "<Tab>", function()
+			return fn["codeium#Accept"]()
+		end, { expr = true, silent = true })
+		keymap.set("i", "<C-S-k>", function()
+			return fn["codeium#CycleCompletions"](1)
+		end, { expr = true, silent = true })
+		keymap.set("i", "<C-S-j>", function()
+			return fn["codeium#CycleCompletions"](-1)
+		end, { expr = true, silent = true })
+		keymap.set("i", "<C-S-c>", function()
+			return fn["codeium#Clear"]()
+		end, { expr = true, silent = true })
+		keymap.set("n", "<leader>ici", "<cmd>Codeium Enable<CR>", { desc = "Enable codeium" })
+		keymap.set("n", "<leader>icd", "<cmd>Codeium Disable<CR>", { desc = "Disable codeium" })
+		keymap.set("n", "<leader>icr", "<cmd>Codeium Reload<CR>", { desc = "Reload codeium" })
+		keymap.set("n", "<leader>icu", "<cmd>Codeium Update<CR>", { desc = "Update codeium" })
+		keymap.set("n", "<leader>icf", "<cmd>Codeium Fix<CR>", { desc = "Fix codeium" })
+		keymap.set("n", "<leader>icp", "<cmd>Codeium Prompt<CR>", { desc = "Prompt codeium" })
+		keymap.set("n", "<leader>icb", "<cmd>Codeium Buy<CR>", { desc = "Buy codeium" })
+		keymap.set("n", "<leader>ics", "<cmd>Codeium Select<CR>", { desc = "Select codeium" })
+		keymap.set("n", "<leader>icn", "<cmd>Codeium Rename<CR>", { desc = "Rename codeium" })
+		keymap.set("n", "<leader>icx", "<cmd>Codeium Close<CR>", { desc = "Close codeium" })
+		keymap.set("n", "<leader>icg", "<cmd>Codeium Open<CR>", { desc = "Open codeium" })
+		keymap.set("n", "<leader>icr", "<cmd>Codeium Refresh<CR>", { desc = "Refresh codeium" })
+		keymap.set("n", "<leader>ica", "<cmd>Codeium Auth<CR>", { desc = "Auth codeium" })
+	end,
+}
