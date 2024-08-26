@@ -27,7 +27,18 @@ fi
 echo -ne "\n\nUse path '$HOME/.zsh-custom/many-your-alias.zsh' for custom alias with your own.\nCreate 'mkdir $HOME/.zsh-custom' if not exists\n"
 function changeShell(){
   echo "Set default shell to ZSH"
-  [[ $_thisTermux ]] && chsh -s zsh || chsh -s $(which zsh)
+  if [[ $_thisTermux ]]; then 
+    if [[ $(readlink /proc/$$/exe | grep "/usr/bin") && -f "/etc/shells" ]]; then
+      if [[ $(cat /etc/shells | grep "/data/data/com.termux/files/usr/bin/zsh") ]]; then
+        echo -ne "\n/data/data/com.termux/files/usr/bin/zsh\n" >> /etc/shells
+      fi
+        chsh -s /data/data/com.termux/files/usr/bin/zsh
+    else
+      chsh -s zsh
+    fi
+  else
+    chsh -s $(which zsh)
+  fi
 }
 [[ $(basename $SHELL) != 'zsh' ]] && changeShell
 if $_thisTermux; then termux-reload-settings; fi
