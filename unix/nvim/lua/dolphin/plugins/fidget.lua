@@ -22,7 +22,7 @@ return {
 			ignore_done_already = false, -- Ignore new tasks that are already complete
 			ignore_empty_message = false, -- Ignore new tasks that don't contain a message
 			clear_on_detach = function(client_id)
-				return vim.tbl_contains({ "tsserver", "eslint" }, vim.lsp.get_client_by_id(client_id).name)
+				return vim.tbl_contains({ "ts_ls", "eslint" }, vim.lsp.get_client_by_id(client_id).name)
 			end,
 		},
 	},

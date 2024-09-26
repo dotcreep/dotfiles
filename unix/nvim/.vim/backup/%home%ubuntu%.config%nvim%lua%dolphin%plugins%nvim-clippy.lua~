@@ -1,7 +1,0 @@
-return {
-	"vappolinario/cmp-clippy",
-	dependencies = {
-		"hrsh7th/nvim-cmp",
-		"nvim-lua/plenary.nvim",
-	},
-}

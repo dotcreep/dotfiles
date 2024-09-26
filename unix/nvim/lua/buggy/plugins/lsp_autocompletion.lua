@@ -2,7 +2,7 @@
 local lsp_servers = {
   'html',
   'cssls',
-  'tsserver',
+  'ts_ls',
   'eslint',
   'gopls',
   'lua_ls',

@@ -31,20 +31,24 @@ return {
 						},
 					},
 				})
+			elseif lsp == "ts_ls" then
+				lspconfig.ts_ls.setup({
+					capabilities = capabilities,
+					on_attach = function(client)
+						client.server_capabilities.documentHighlightProvider = true
+					end,
+				})
 			else
 				lspconfig[lsp].setup({
 					capabilities = capabilities,
+					on_attach = function(client)
+						client.server_capabilities.documentHighlightProvider = true
+					end,
 				})
 			end
 		end
 		for _, lsp in ipairs(lsp_servers) do
 			setup(lsp)
 		end
-		lspconfig.tsserver.setup({
-			capabilities = cmp_nvim_lsp.default_capabilities(),
-			on_attach = function(client)
-				client.server_capabilities.documentHighlightProvider = true
-			end,
-		})
 	end),
 }
