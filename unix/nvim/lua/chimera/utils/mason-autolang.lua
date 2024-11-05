@@ -61,7 +61,7 @@ local tools = { lsp = {}, linter = {}, dap = {}, formatter = {} }
 
 local configurations = { -- Konfigurasi untuk berbagai bahasa dan tools
 	{ "python3", "pyright", "flake8", "debugpy", "black" }, -- Python
-	{ "node", "tsserver", "eslint", "node-debug2-adapter", "prettier" }, -- Node.js / Javascript
+	{ "node", "ts_ls", "eslint", "node-debug2-adapter", "prettier" }, -- Node.js / Javascript
 	{ "go", "gopls", "golangci_lint_ls", "delve", "gofmt" }, -- Golang
 	{ "luac", "lua_ls", "luacheck", "nlua", "stylua" }, -- Lua
 	{ "gcc", "clangd", "cpplint", "cpptools", "clang-format" }, -- C
@@ -91,8 +91,8 @@ local configurations = { -- Konfigurasi untuk berbagai bahasa dan tools
 	{ "puppet", "puppet", "puppet-lint", nil, nil }, -- Puppet
 	{ "sqlcmd", "sqlls", "sqlfluff", nil, nil }, -- SQL
 	{ "terraform", "terraformls", "tflint", nil, nil }, -- Terraform
-	{ "node", "tsserver", "eslint", nil, "prettier" }, -- TypeScript
-	{ "node", "tsserver", "eslint", nil, "prettier" }, -- React
+	{ "node", "ts_ls", "eslint", nil, "prettier" }, -- TypeScript
+	{ "node", "ts_ls", "eslint", nil, "prettier" }, -- React
 	{ "node", "volar", "eslint", nil, "prettier" }, -- Vue.js
 	{ "node", "angularls", "eslint", nil, "prettier" }, -- AngularJS
 	{ "vim", "vimls", nil, nil, nil }, -- Vimscript
