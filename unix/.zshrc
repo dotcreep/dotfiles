@@ -22,7 +22,15 @@ done
 export STARSHIP_CONFIG=$HOME/.zsh/starship.toml
 export STARSHIP_CACHE=$HOME/.starship/cache
 export GIT_SSH_COMMAND='git -c command.timeout=300'
-export PATH=$PATH:/snap/bin
+if [ -d "/snap/bin" ] ; then
+    PATH="/snap/bin:$PATH"
+fi
+if [ -d "/usr/local/go/bin" ] ; then
+    PATH="/usr/local/go/bin:$PATH"
+fi
+if [ -d "/opt/nvim-linux64/bin" ] ; then
+    PATH="/opt/nvim-linux64/bin:$PATH"
+fi
 
 # Bindkey shortcut
 bindkey "\e[H" beginning-of-line # Home
