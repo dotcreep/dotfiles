@@ -125,7 +125,10 @@ function _processCheck(){
 }
 
 function instal(){
-  [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
+  if [[ $_systemType == "termux" ]]; then
+    $_packageManager install $*
+    return 0
+  fi
   if [[ $# -eq 0 ]]; then
     _HandleError "Need a package argument"
     return 1
