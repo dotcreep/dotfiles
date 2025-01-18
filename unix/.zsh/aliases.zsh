@@ -482,6 +482,7 @@ function ls(){
             if [[ ! -f "/data/data/com.termux/files/usr/bin/exa" ]]; then
               _HandleStart "Installing ..."
               wget -qO /data/data/com.termux/files/usr/bin/exa https://github.com/dotcreep/dotfiles/releases/download/exa-v0.10.1/exa
+              installnc libgit2
               _HandleStart "Configuring ..."
               chmod 755 /data/data/com.termux/files/usr/bin/exa
             fi
