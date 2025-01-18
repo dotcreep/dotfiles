@@ -23,7 +23,7 @@ git clone https://github.com/dotcreep/dotfiles.git && (cd dotfiles && bash insta
 
 Minimize Shortcut | Shortcut | Function
 --- | --- | ---
-`i` | `install` | Install Package
+`i` | `instal` | Install Package
 `inc` | `installnc` | Install Package without confirm
 `u` | `update` | Update Repository
 `uu` | `upgrade` | Upgrade Packages
