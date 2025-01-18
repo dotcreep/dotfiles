@@ -36,7 +36,7 @@ function _checkSystem(){
       done
     fi
   }
-  if [[ -d "/data/data/com.termux/files/usr" ]]; then
+  if [[ -d "/data/data/com.termux" ]] && [ -n $PREFIX ] && [ -d "$PREFIX" ] && [[ $(command -v pkg)]]; then
     _systemType="termux" && _thisTermux=true
   elif [[ -n $(uname -mrs | grep -w Microsoft | sed "s/.*\-//" | awk "{print $1}") ]]; then
     _systemType="windows" && _thisWin=true
@@ -124,7 +124,7 @@ function _processCheck(){
   fi
 }
 
-function install(){
+function instal(){
   [[ $_systemType == "termux" ]] && $_packageManager install $* && return 0
   if [[ $# -eq 0 ]]; then
     _HandleError "Need a package argument"
@@ -670,7 +670,7 @@ function aliasHelp(){
   esac
 }
 
-alias i="install"
+alias i="instal"
 alias u="update"
 alias uu="upgrade"
 alias uuu="updateupgrade"
