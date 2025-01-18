@@ -36,7 +36,7 @@ function _checkSystem(){
       done
     fi
   }
-  if [[ -d "/data/data/com.termux" ]] && [ -n $PREFIX ] && [ -d "$PREFIX" ] && [[ $(command -v pkg)]]; then
+  if [[ -d "/data/data/com.termux" ]] && [ -n $PREFIX ] && [ -d "$PREFIX" ] && [[ $(command -v pkg) ]]; then
     _systemType="termux" && _thisTermux=true
   elif [[ -n $(uname -mrs | grep -w Microsoft | sed "s/.*\-//" | awk "{print $1}") ]]; then
     _systemType="windows" && _thisWin=true
@@ -516,7 +516,7 @@ function ls(){
 
 function aliasHelp(){
   function __PACKAGE_MANAGER__(){
-    echo "    install         Install package"
+    echo "    instal          Install package"
     echo "    installnc       Install package with no confirm"
     echo "    update          Update package"
     echo "    upgrade         Upgrade package"
