@@ -32,7 +32,6 @@ function changeShell(){
       if [[ $(cat /etc/shells | grep "/data/data/com.termux/files/usr/bin/zsh") ]]; then
         echo -ne "\n/data/data/com.termux/files/usr/bin/zsh\n" >> /etc/shells
       fi
-        chsh -s /data/data/com.termux/files/usr/bin/zsh
     else
       chsh -s zsh
     fi
