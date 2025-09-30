@@ -472,7 +472,7 @@ function ls(){
   else
     if [[ ! $(_found eza) ]]; then
       _checkingPackage -i eza -p eza
-      eza
+      eza $*
     fi
     # if [[ ! $(_found exa) ]]; then
     #   _checkingPackage -i exa -p exa
