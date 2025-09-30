@@ -473,6 +473,8 @@ function ls(){
     if [[ ! $(_found eza) ]]; then
       _checkingPackage -i eza -p eza
       eza $*
+    else 
+      eza $*
     fi
     # if [[ ! $(_found exa) ]]; then
     #   _checkingPackage -i exa -p exa
