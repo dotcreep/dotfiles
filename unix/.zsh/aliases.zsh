@@ -470,51 +470,55 @@ function ls(){
   if [[ $(uname -a | grep "\-aws") ]]; then
     ls
   else
-    if [[ ! $(_found exa) ]]; then
-      _checkingPackage -i exa -p exa
-      if [[ $? -eq 1 ]] || [[ ! $(_found exa) ]] && [[ "$_sysName" == "ubuntu" ]] || [[ "$_thisTermux" ]]; then
-        _HandleStart "Trying install dependency"
-        if [[ ! $(_found unzip) ]]; then
-          _checkingPackage -i unzip -p unzip
-        fi
-        if $_thisTermux; then
-          if [[ "$_sysArch" == "aarch64" ]]; then
-            if [[ ! -f "/data/data/com.termux/files/usr/bin/exa" ]]; then
-              _HandleStart "Installing ..."
-              wget -qO /data/data/com.termux/files/usr/bin/exa https://github.com/dotcreep/dotfiles/releases/download/exa-v0.10.1/exa
-              installnc libgit2 &>/dev/null
-              _HandleStart "Configuring ..."
-              chmod 755 /data/data/com.termux/files/usr/bin/exa
-            fi
-          fi
-        else
-          if [[ "$_sysArch" == "aarch64" ]]; then
-            if [[ ! -f "/usr/bin/exa" ]]; then
-              _HandleStart "Installing ..."
-              sudo wget -qO /usr/bin/exa https://github.com/dotcreep/dotfiles/releases/download/exa-v0.10.1/exa
-              _HandleStart "Configuring ..."
-              sudo chmod +x /usr/bin/exa
-            fi
-          fi
-          if [[ "$_sysArch" == "x86_64" ]]; then
-            _HandleStart "Download dependency"
-            wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip
-            if [[ ! -f "/usr/bin/exa" ]]; then
-              _HandleStart "Installing ..."
-              sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
-              _HandleStart "Configuring ..."
-              sudo chmod +x /usr/bin/exa
-              rm /tmp/exa.zip
-            fi
-          fi
-        fi
-        _HandleResult "Success install dependency"
-        echo ""
-        exa --icons --group-directories-first $*
-      fi
-    else
-      exa --icons --group-directories-first $*
+    if [[ ! $(_found eza) ]]; then
+      _checkingPackage -i eza -p eza
+      eza
     fi
+    # if [[ ! $(_found exa) ]]; then
+    #   _checkingPackage -i exa -p exa
+    #   if [[ $? -eq 1 ]] || [[ ! $(_found exa) ]] && [[ "$_sysName" == "ubuntu" ]] || [[ "$_thisTermux" ]]; then
+    #     _HandleStart "Trying install dependency"
+    #     if [[ ! $(_found unzip) ]]; then
+    #       _checkingPackage -i unzip -p unzip
+    #     fi
+    #     if $_thisTermux; then
+    #       if [[ "$_sysArch" == "aarch64" ]]; then
+    #         if [[ ! -f "/data/data/com.termux/files/usr/bin/exa" ]]; then
+    #           _HandleStart "Installing ..."
+    #           wget -qO /data/data/com.termux/files/usr/bin/exa https://github.com/dotcreep/dotfiles/releases/download/exa-v0.10.1/exa
+    #           installnc libgit2 &>/dev/null
+    #           _HandleStart "Configuring ..."
+    #           chmod 755 /data/data/com.termux/files/usr/bin/exa
+    #         fi
+    #       fi
+    #     else
+    #       if [[ "$_sysArch" == "aarch64" ]]; then
+    #         if [[ ! -f "/usr/bin/exa" ]]; then
+    #           _HandleStart "Installing ..."
+    #           sudo wget -qO /usr/bin/exa https://github.com/dotcreep/dotfiles/releases/download/exa-v0.10.1/exa
+    #           _HandleStart "Configuring ..."
+    #           sudo chmod +x /usr/bin/exa
+    #         fi
+    #       fi
+    #       if [[ "$_sysArch" == "x86_64" ]]; then
+    #         _HandleStart "Download dependency"
+    #         wget -qO /tmp/exa.zip https://github.com/ogham/exa/releases/download/v0.10.1/exa-linux-x86_64-v0.10.1.zip
+    #         if [[ ! -f "/usr/bin/exa" ]]; then
+    #           _HandleStart "Installing ..."
+    #           sudo unzip -qqj /tmp/exa.zip 'bin/exa' -d /usr/bin/
+    #           _HandleStart "Configuring ..."
+    #           sudo chmod +x /usr/bin/exa
+    #           rm /tmp/exa.zip
+    #         fi
+    #       fi
+    #     fi
+    #     _HandleResult "Success install dependency"
+    #     echo ""
+    #     exa --icons --group-directories-first $*
+    #   fi
+    # else
+    #   exa --icons --group-directories-first $*
+    # fi
   fi
 }
 
